@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Silas Yan — Designer gráfico</title>
+<meta name="description" content="Portfólio de Silas Yan (Yan DSGN): identidade visual, logotipos, capas de música e artes para artistas.">
+<meta name="theme-color" content="#0e1412">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;700&family=Silkscreen&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#0e1412; --ink:#0a0d0c; --panel:#1f2321; --panel2:#2a2f2c; --line:#3a413d;
+  --sail:#e4dcc8; --sail2:#b9b1a0; --copper:#c8743a; --copper2:#e39a5c; --green:#2c5240; --blue:#4aa8ff;
+  --pix:'Pixelify Sans',monospace; --tiny:'Silkscreen',monospace; --body:'Bricolage Grotesque',system-ui,sans-serif;
+  --ease:cubic-bezier(.65,0,.35,1); --out:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--night);color:var(--sail);font:400 16px/1.55 var(--body);overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--copper2);outline-offset:3px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ---------- loader ---------- */
+#boot{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--ink);transition:opacity .8s,visibility .8s}
+#boot.gone{opacity:0;visibility:hidden}
+#boot::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
+.term{width:min(560px,90vw);font:400 15px/1.7 var(--tiny);letter-spacing:.02em;color:#cfc8b6}
+.term .cmd b{color:var(--copper2);font-weight:400}
+.term .cmd{margin-bottom:18px}
+.term .ok{color:#7fd38f}
+.term ul{list-style:none;min-height:150px}
+.term li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.term .cur{display:inline-block;width:.6em;height:1em;background:var(--copper2);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.meter{display:flex;justify-content:space-between;margin-top:18px;color:var(--copper2)}
+.bar{display:flex;gap:3px;margin-top:6px}
+.bar i{flex:1;height:9px;background:#26201c}
+.bar i.on{background:var(--copper2)}
+.enter{display:flex;gap:12px;margin-top:26px;opacity:0;transform:translateY(8px);transition:opacity .5s,transform .5s var(--out);pointer-events:none}
+.enter.show{opacity:1;transform:none;pointer-events:auto}
+.enter button{flex:1;min-height:48px;border-radius:10px;cursor:pointer;font:400 13px var(--tiny);letter-spacing:.06em;border:2px solid var(--copper2);background:transparent;color:var(--sail);transition:background-color .2s,color .2s}
+.enter button:first-child{background:var(--copper2);color:var(--ink)}
+.enter button:hover{background:var(--sail);color:var(--ink);border-color:var(--sail)}
+
+/* ---------- 3d view ---------- */
+#view{position:fixed;inset:0;background:#0b100e;cursor:grab;touch-action:none}
+#view.drag{cursor:grabbing}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block;transition:filter .6s}
+body.zoomed #gl{filter:brightness(.42) saturate(.85)}
+body.zoomed.on-trabalhos #gl{filter:brightness(.3)}
+#hots{position:absolute;inset:0;pointer-events:none}
+.hs{position:absolute;left:0;top:0;width:0;height:0;border:0;background:none;cursor:pointer;pointer-events:auto;transition:opacity .3s}
+.hs.hidden{opacity:0;pointer-events:none}
+.hs .dot{position:absolute;left:0;top:0;width:30px;height:30px;transform:translate(-50%,-50%);display:grid;place-items:center}
+.hs .dot i{width:11px;height:11px;background:var(--copper2);transform:rotate(45deg);box-shadow:0 0 0 3px rgba(227,154,92,.25),0 0 14px 2px rgba(227,154,92,.6);animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:rotate(45deg) scale(.7);box-shadow:0 0 0 8px rgba(227,154,92,0),0 0 8px 1px rgba(227,154,92,.35)}}
+.hs .tag{position:absolute;left:18px;top:0;transform:translateY(-50%);white-space:nowrap;font:400 11px var(--tiny);letter-spacing:.06em;background:rgba(10,13,12,.86);border:1px solid rgba(228,220,200,.25);padding:6px 10px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s}
+.hs:hover .tag,.hs:focus-visible .tag{opacity:1}
+.hs:focus-visible{outline:none}.hs:focus-visible .dot i{background:var(--sail)}
+body.zoomed #hots{display:none}
+.nogl{position:fixed;inset:0;display:none;place-items:center;text-align:center;padding:24px;color:#cfc8b6}
+/* hud */
+.hud{position:fixed;z-index:20;pointer-events:none}
+.hud>*{pointer-events:auto}
+.intro{left:clamp(16px,3vw,40px);bottom:96px;max-width:440px;transition:opacity .5s,transform .5s var(--out)}
+.intro h1{font:700 clamp(40px,5.6vw,80px)/.9 var(--pix);letter-spacing:.01em;color:#fff4e4;text-shadow:0 0 18px rgba(227,154,92,.35),3px 3px 0 #000}
+.intro p{margin-top:12px;font-size:16px;color:#d8d0bd;text-shadow:0 1px 8px #000;max-width:30em}
+.intro .hint{margin-top:14px;font:400 11px var(--tiny);letter-spacing:.06em;color:var(--copper2)}
+body.zoomed .intro{opacity:0;transform:translateY(10px);pointer-events:none}
+.topl{left:clamp(12px,2vw,24px);top:clamp(12px,2vw,20px)}
+.topr{right:clamp(12px,2vw,24px);top:clamp(12px,2vw,20px);display:flex;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;border-radius:10px;border:1px solid rgba(228,220,200,.22);background:rgba(10,13,12,.78);backdrop-filter:blur(6px);font:400 11px var(--tiny);letter-spacing:.06em;cursor:pointer;transition:background-color .2s,border-color .2s}
+.chip:hover{background:#1c201e;border-color:rgba(228,220,200,.5)}
+#back{opacity:0;transform:translateX(-8px);pointer-events:none;transition:opacity .4s,transform .4s var(--out)}
+body.zoomed #back{opacity:1;transform:none;pointer-events:auto}
+#back i{color:var(--copper2);font-style:normal}
+.dock{left:50%;bottom:clamp(12px,2.4vh,24px);transform:translateX(-50%);display:flex;gap:4px;padding:5px;border-radius:14px;background:rgba(10,13,12,.82);border:1px solid rgba(228,220,200,.18);backdrop-filter:blur(8px)}
+.dock button{border:0;background:transparent;min-height:40px;padding:0 14px;border-radius:9px;cursor:pointer;font:400 11px var(--tiny);letter-spacing:.06em;color:#cfc8b6;transition:background-color .2s,color .2s;white-space:nowrap}
+.dock button span{color:var(--copper2);margin-right:6px}
+.dock button:hover{background:#232825}
+.dock button[aria-current="true"]{background:var(--copper2);color:var(--ink)}
+.dock button[aria-current="true"] span{color:var(--ink)}
+.drag-hint{left:50%;bottom:78px;transform:translateX(-50%);font:400 10px var(--tiny);letter-spacing:.08em;color:#b9b1a0;text-shadow:0 1px 6px #000;transition:opacity .5s}
+body.zoomed .drag-hint{opacity:0}
+@media(max-width:700px){
+  .dock button{padding:0 9px;font-size:10px}.dock button span{display:none}
+  .intro{bottom:auto;top:64px;right:16px}.intro h1{font-size:40px}.intro p{font-size:14px}
+}
+
+/* ---------- panels ---------- */
+.panel{position:fixed;z-index:30;inset:0;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;padding:72px 16px 84px;opacity:0;visibility:hidden;transition:opacity .45s,visibility .45s}
+.panel.open{opacity:1;visibility:visible}
+.panel .sheet{transform:translateY(16px) scale(.98);transition:transform .55s var(--out)}
+.panel.open .sheet{transform:none}
+.ph{font:700 clamp(30px,4vw,52px)/.95 var(--pix);color:#fff4e4}
+.lede{color:#cfc8b6;max-width:36em;margin-top:8px}
+
+/* -- editor (trabalhos) -- */
+#p-trabalhos{padding:clamp(56px,7vh,72px) clamp(8px,2vw,28px) clamp(76px,10vh,88px)}
+.ed{width:min(1320px,100%);height:100%;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto 1fr auto;background:#1b1d1c;border:1px solid #3a3e3c;border-radius:12px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 6px rgba(0,0,0,.35)}
+.ed-title{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#141615;border-bottom:1px solid #2c302e;font:400 11px var(--tiny);letter-spacing:.04em;color:#a9a294}
+.ed-title .app{width:22px;height:22px;border-radius:5px;background:#0f2a44;border:1px solid var(--blue);display:grid;place-items:center;color:var(--blue);font:700 10px var(--pix)}
+.ed-title .fn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ed-title .fn b{color:var(--sail);font-weight:400}
+.ed-x{border:0;background:transparent;cursor:pointer;min-width:40px;min-height:32px;border-radius:6px;color:#cfc8b6;font:400 11px var(--tiny)}
+.ed-x:hover{background:#2a2f2c}
+.ed-menu{display:flex;gap:18px;padding:6px 14px;background:#202322;border-bottom:1px solid #2c302e;font:400 12px var(--body);color:#9d978b;overflow:hidden;white-space:nowrap}
+.ed-body{display:grid;grid-template-columns:44px 1fr 300px;min-height:0}
+.tools{background:#202322;border-right:1px solid #2c302e;display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0}
+.tools i{width:24px;height:24px;border-radius:5px;display:grid;place-items:center;color:#8e887d;font:400 12px var(--pix);font-style:normal}
+.tools i.on{background:#34393a;color:var(--sail)}
+.canvas{position:relative;min-height:0;overflow:auto;background:#151716;background-image:linear-gradient(45deg,#191b1a 25%,transparent 25%,transparent 75%,#191b1a 75%),linear-gradient(45deg,#191b1a 25%,transparent 25%,transparent 75%,#191b1a 75%);background-size:24px 24px;background-position:0 0,12px 12px;padding:clamp(14px,2vw,28px);scrollbar-color:#3a3e3c transparent}
+.side{background:#202322;border-left:1px solid #2c302e;display:flex;flex-direction:column;min-height:0;overflow:auto}
+.pnl-h{display:flex;justify-content:space-between;padding:9px 12px;font:400 10px var(--tiny);letter-spacing:.06em;color:#a9a294;background:#1a1c1b;border-bottom:1px solid #2c302e;position:sticky;top:0;z-index:1}
+.layers{list-style:none}
+.layers button{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:18px 34px 1fr auto;align-items:center;gap:8px;width:100%;padding:7px 12px;border-bottom:1px solid #282c2a;font:500 13px var(--body);color:#cfc8b6}
+.layers button:hover{background:#272b29}
+.layers button[aria-selected="true"]{background:#24405a;color:#fff}
+.layers button:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+.layers .eye{font:400 10px var(--pix);color:#8e887d}
+.layers img{width:34px;height:26px;object-fit:cover;border-radius:3px;background:#111;outline:1px solid #3a3e3c}
+.layers small{font:400 10px var(--tiny);color:#8e887d}
+.props{padding:14px 12px 18px;font-size:14px;color:#cfc8b6}
+.props h3{font:700 22px/1.05 var(--pix);color:#fff4e4;margin:2px 0 8px}
+.props .seg{font:400 10px var(--tiny);letter-spacing:.05em;color:var(--copper2)}
+.props p{font-size:14px;line-height:1.55}
+.deliv{display:flex;flex-wrap:wrap;gap:5px;margin:12px 0}
+.deliv span{font-size:11.5px;border:1px solid #4a504d;border-radius:6px;padding:2px 8px;color:#ddd5c3}
+.sw{display:flex;gap:6px;flex-wrap:wrap}
+.sw span{display:grid;gap:3px;font:400 9px var(--tiny);color:#8e887d;text-align:center}
+.sw i{width:38px;height:38px;border-radius:6px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+.status{display:flex;justify-content:space-between;gap:12px;padding:6px 12px;background:#141615;border-top:1px solid #2c302e;font:400 10px var(--tiny);letter-spacing:.04em;color:#8e887d}
+/* canvas content */
+.case{display:grid;place-items:center;min-height:100%}
+.case img{max-width:100%;max-height:calc(100vh - 330px);width:auto;height:auto;border-radius:4px;box-shadow:0 12px 40px rgba(0,0,0,.5);cursor:zoom-in}
+.case-nav{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px}
+.case-nav button{min-width:44px;min-height:38px;border-radius:8px;border:1px solid #4a504d;background:#202322;cursor:pointer;font:400 12px var(--tiny)}
+.case-nav button:hover{background:#2c312f}
+.case-nav span{font:400 11px var(--tiny);color:#a9a294;min-width:64px;text-align:center}
+.mas{columns:3 210px;column-gap:14px}
+.mas figure,.sq figure{break-inside:avoid;margin:0 0 14px;border-radius:6px;overflow:hidden;cursor:zoom-in;background:#222;position:relative;outline:1px solid rgba(255,255,255,.06)}
+.mas img,.sq img{display:block;width:100%;height:auto;transition:transform .8s var(--out)}
+.mas figure:hover img,.sq figure:hover img{transform:scale(1.03)}
+.mas figure.sel,.sq figure.sel{outline:2px solid var(--blue)}
+.sq{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.sq figure{margin:0;aspect-ratio:1}.sq img{height:100%;object-fit:cover}
+.sq.logos figure{aspect-ratio:4/3;background:#fff}
+@media(max-width:900px){
+  .ed,.canvas,.props{min-width:0}
+  .ed-body{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr auto}
+  .tools,.ed-menu{display:none}
+  .side{display:contents}
+  .side .pnl-h{display:none}
+  .layers{display:flex;overflow-x:auto;background:#202322;border-bottom:1px solid #2c302e;order:-1;scrollbar-width:none}
+  .layers li{flex:0 0 auto}
+  .layers button{grid-template-columns:auto auto;border:0;padding:10px 12px;white-space:nowrap}
+  .layers .eye,.layers img{display:none}
+  .props{order:2;border-top:1px solid #2c302e;max-height:30vh;overflow:auto;background:#202322}
+  .case img{max-height:52vh}
+}
+
+/* -- corkboard (servicos) -- */
+.cork{width:min(1100px,100%);max-height:100%;overflow:auto;border-radius:14px;padding:clamp(20px,3vw,40px);background:#8f6c47;background-image:radial-gradient(#7d5d3b 1px,transparent 1.5px),radial-gradient(#a57f57 1px,transparent 1.5px);background-size:9px 9px,13px 13px;border:10px solid #4a3626;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.cork .ph{color:#1b130c;text-shadow:none}
+.cork .lede{color:#2b1f14}
+.notes{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:22px;margin-top:26px}
+.note{position:relative;padding:24px 18px 18px;border-radius:3px;color:#1b1714;box-shadow:0 8px 16px rgba(0,0,0,.28);transform:rotate(var(--r,0deg));transition:transform .3s var(--out)}
+.note:hover{transform:rotate(0) translateY(-4px)}
+.note::before{content:"";position:absolute;left:50%;top:7px;width:12px;height:12px;border-radius:50%;background:#c93a32;box-shadow:inset -2px -2px 0 rgba(0,0,0,.25);transform:translateX(-50%)}
+.note h3{font:700 21px/1.05 var(--pix);margin-bottom:8px}
+.note p{font-size:14.5px;line-height:1.5}
+.n-sail{background:#e9e1cd}.n-cop{background:#d98a4a}.n-grn{background:#2f5a46;color:#efe7d4}
+.cork .cta{margin-top:26px;display:flex;justify-content:flex-end}
+
+/* -- sobre -- */
+.about{width:min(1000px,100%);max-height:100%;overflow:auto;display:grid;grid-template-columns:.8fr 1.2fr;gap:clamp(20px,4vw,50px);align-items:center;background:#18201d;border:1px solid #2f3a35;border-radius:16px;padding:clamp(20px,3.4vw,44px);box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.polaroid{background:#ece6d6;padding:12px 12px 46px;border-radius:4px;transform:rotate(-3deg);box-shadow:0 18px 40px rgba(0,0,0,.45);position:relative}
+.polaroid .ph-box{aspect-ratio:4/5;background:#2c5240;display:grid;place-items:center;text-align:center;color:#d6e3da;font:400 11px var(--tiny);letter-spacing:.05em;padding:16px;overflow:hidden}
+.polaroid .ph-box img{width:100%;height:100%;object-fit:cover}
+.polaroid figcaption{position:absolute;left:0;right:0;bottom:12px;text-align:center;font:500 18px var(--pix);color:#2b2620}
+.about p{color:#d6cfbf;margin-top:12px;max-width:34em}
+.about p strong{color:#fff4e4}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:22px}
+.stats div{background:#202b27;border:1px solid #33413b;border-radius:10px;padding:10px 12px}
+.stats b{display:block;font:700 34px/1 var(--pix);color:var(--copper2)}
+.stats span{font-size:12.5px;color:#a9b5ad}
+.tools-l{margin-top:16px;font:400 10.5px var(--tiny);letter-spacing:.04em;color:#a9b5ad}
+@media(max-width:800px){.about{grid-template-columns:1fr}.polaroid{max-width:260px;margin:0 auto}.stats{grid-template-columns:repeat(2,1fr)}}
+
+/* -- contato (phone) -- */
+.phone{width:min(420px,100%);max-height:100%;display:flex;flex-direction:column;background:#0d1110;border:10px solid #050606;border-radius:36px;box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 0 0 1px #2a2f2c;overflow:hidden}
+.phone .bar-top{display:flex;justify-content:space-between;align-items:center;padding:10px 18px 6px;font:400 10px var(--tiny);color:#a9a294}
+.chat-h{display:flex;align-items:center;gap:10px;padding:8px 14px 12px;border-bottom:1px solid #1f2523}
+.chat-h img{width:40px;height:40px;border-radius:50%;background:#e4dcc8;object-fit:contain;padding:4px}
+.chat-h b{font:700 16px var(--pix)}
+.chat-h small{display:block;color:#7fd38f;font:400 9px var(--tiny)}
+.chat{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:86%;padding:9px 12px;border-radius:14px;font-size:14.5px;line-height:1.45}
+.msg.in{background:#1d2523;border-bottom-left-radius:4px}
+.msg.out{background:var(--copper);color:#140d08;align-self:flex-end;border-bottom-right-radius:4px}
+.chat form{display:grid;gap:10px;margin-top:4px}
+.chat label{display:grid;gap:4px;font:400 10px var(--tiny);letter-spacing:.04em;color:#a9a294}
+.chat input,.chat textarea{font:400 15px var(--body);color:var(--sail);background:#141a18;border:1px solid #2c3532;border-radius:10px;padding:10px 12px;outline:none}
+.chat input:focus,.chat textarea:focus{border-color:var(--copper2)}
+.chat textarea{min-height:80px;resize:vertical}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opts input{position:absolute;opacity:0;pointer-events:none}
+.opts label{display:inline-flex;align-items:center;min-height:34px;padding:0 11px;border-radius:99px;border:1px solid #3a4440;font:500 13px var(--body);letter-spacing:0;color:#d6cfbf;cursor:pointer}
+.opts input:checked+label{background:var(--sail);color:var(--ink);border-color:var(--sail)}
+.opts input:focus-visible+label{outline:2px solid var(--copper2)}
+.send{min-height:46px;border-radius:12px;border:0;background:var(--copper2);color:var(--ink);font:400 12px var(--tiny);letter-spacing:.05em;cursor:pointer}
+.send:hover{background:var(--sail)}
+.err{color:#ff9b8a;font-size:13px;min-height:1em}
+.outs{display:none;gap:8px}
+.outs.show{display:grid}
+.outs a,.outs button{display:flex;justify-content:center;align-items:center;min-height:42px;border-radius:10px;border:1px solid #3a4440;background:#141a18;text-decoration:none;font:400 11px var(--tiny);cursor:pointer}
+.outs a.wa{background:#1f6b45;border-color:#1f6b45}
+.direct{font-size:13px;color:#a9a294;padding:10px 14px 14px;border-top:1px solid #1f2523}
+.direct b{color:var(--sail);font-weight:500}
+
+/* lightbox */
+.lb{position:fixed;inset:0;z-index:60;background:rgba(5,7,6,.94);display:grid;place-items:center;padding:20px;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s}
+.lb.open{opacity:1;visibility:visible}
+.lb figure{display:grid;gap:10px;justify-items:center;text-align:center;font-size:14px;color:#cfc8b6}
+.lb img{max-height:84vh;max-width:92vw;border-radius:6px}
+.lb button{position:absolute;border:0;background:rgba(20,24,22,.8);border-radius:10px;cursor:pointer;min-width:44px;min-height:44px;font:400 12px var(--tiny)}
+.lb .x{top:14px;right:14px;padding:0 14px}.lb .pv{left:12px;top:50%}.lb .nx{right:12px;top:50%}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01s!important}}
+</style>
+</head>
+<body>
+<!-- ================= BOOT ================= -->
+<div id="boot" role="dialog" aria-label="Carregando portfólio">
+  <div class="term">
+    <div class="cmd">$ abrir <b>yan_portfolio.psd</b> --cena ./quarto</div>
+    <ul id="log" aria-live="polite"></ul>
+    <div class="meter"><span id="mlabel">RENDERIZANDO</span><span id="mpct">0%</span></div>
+    <div class="bar" id="bar"></div>
+    <div class="enter" id="enter">
+      <button id="enSom">Entrar com som</button>
+      <button id="enMudo">Entrar sem som</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ROOM (3D) ================= -->
+<div id="view" aria-label="Quarto do Yan em 3D. Arraste para olhar em volta; use os pontos ou o menu inferior para navegar.">
+  <canvas id="gl" aria-hidden="true"></canvas>
+  <div id="hots"></div>
+</div>
+<div class="nogl" id="nogl">Seu navegador não conseguiu abrir a cena 3D. Use o menu abaixo para ver as seções.</div>
+<div class="hud intro">
+  <h1>Silas Yan</h1>
+  <p>Designer gráfico. Identidade visual, logotipos, capas de música e artes para artistas.</p>
+  <div class="hint">◆ clique nos pontos do quarto · arraste para olhar em volta</div>
+</div>
+<div class="hud topl"><button class="chip" id="back"><i>◂</i> Voltar ao quarto</button></div>
+<div class="hud topr"><button class="chip" id="snd" aria-pressed="false">♪ Som: off</button></div>
+<div class="hud drag-hint" id="dragHint">◂ arraste para olhar em volta ▸</div>
+<nav class="hud dock" aria-label="Seções">
+  <button data-go="trabalhos"><span>01</span>Trabalhos</button>
+  <button data-go="servicos"><span>02</span>Serviços</button>
+  <button data-go="sobre"><span>03</span>Sobre</button>
+  <button data-go="contato"><span>04</span>Contato</button>
+</nav>
+
+<!-- ================= TRABALHOS (editor) ================= -->
+<section class="panel" id="p-trabalhos" role="dialog" aria-modal="true" aria-labelledby="ed-fn">
+  <div class="sheet ed">
+    <div class="ed-title"><span class="app">Yd</span><span class="fn" id="ed-fn">yan_portfolio.psd @ 100% (<b id="ed-layer">Identidade visual</b>, RGB/8)</span><button class="ed-x" data-close aria-label="Fechar e voltar ao quarto">✕</button></div>
+    <div class="ed-menu" aria-hidden="true"><span>Arquivo</span><span>Editar</span><span>Imagem</span><span>Camada</span><span>Tipo</span><span>Selecionar</span><span>Filtro</span><span>Exibir</span><span>Janela</span><span>Ajuda</span></div>
+    <div class="ed-body">
+      <div class="tools" aria-hidden="true"><i class="on">↖</i><i>▭</i><i>✎</i><i>⌫</i><i>T</i><i>✋</i><i>◐</i><i>⌕</i></div>
+      <div class="canvas" id="canvas" tabindex="-1"></div>
+      <div class="side">
+        <div class="pnl-h"><span>CAMADAS</span><span id="totalCount"></span></div>
+        <ul class="layers" role="tablist" aria-label="Categorias" id="layers"></ul>
+        <div class="pnl-h"><span>PROPRIEDADES</span></div>
+        <div class="props" id="props" aria-live="polite"></div>
+      </div>
+    </div>
+    <div class="status"><span id="st-l">Doc: —</span><span>← → navegar · clique para ampliar</span></div>
+  </div>
+</section>
+
+<!-- ================= SERVIÇOS ================= -->
+<section class="panel" id="p-servicos" role="dialog" aria-modal="true" aria-labelledby="sv-h">
+  <div class="sheet cork">
+    <h2 class="ph" id="sv-h">Serviços</h2>
+    <p class="lede">Do primeiro rascunho ao arquivo final, com tudo o que a marca precisa para aparecer bem em qualquer lugar.</p>
+    <div class="notes" id="notes"></div>
+    <div class="cta"><button class="chip" data-go="contato" style="background:#1b130c;color:#f3e9d6">Pedir orçamento ▸</button></div>
+  </div>
+</section>
+
+<!-- ================= SOBRE ================= -->
+<section class="panel" id="p-sobre" role="dialog" aria-modal="true" aria-labelledby="ab-h">
+  <div class="sheet about">
+    <figure class="polaroid">
+      <!-- Para usar sua foto: troque o conteúdo de .ph-box por <img src="img/sua-foto.webp" alt="Silas Yan"> -->
+      <div class="ph-box">SUA FOTO AQUI<br>retrato 4:5</div>
+      <figcaption>eu, no quarto</figcaption>
+    </figure>
+    <div>
+      <h2 class="ph" id="ab-h">Prazer, eu sou o Yan</h2>
+      <p>Sou <strong>Silas Yan</strong>, designer gráfico. Minha base vem do graffiti, do lettering e da cultura de rua, e eu levo esse olhar para marcas de todo tipo: de escritório de advocacia a estúdio de tatuagem, de DJ a infoprodutor.</p>
+      <p>Trabalho do conceito à entrega: pesquisa, rascunhos, vetorização, sistema visual e aplicações. Atendo marcas, agências e artistas, de forma remota.</p>
+      <div class="stats" id="stats"></div>
+      <p class="tools-l">FERRAMENTAS: ILLUSTRATOR · PHOTOSHOP · FIGMA · AFTER EFFECTS · BLENDER</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CONTATO ================= -->
+<section class="panel" id="p-contato" role="dialog" aria-modal="true" aria-labelledby="ct-h">
+  <div class="sheet phone">
+    <div class="bar-top"><span>21:47</span><span>▮▮▮ 5G ▰</span></div>
+    <div class="chat-h"><img src="img/logo-sm.webp" alt=""><div><b id="ct-h">Yan DSGN</b><small>● online · responde em até 24h</small></div></div>
+    <div class="chat">
+      <div class="msg in">Opa! Bora criar junto? 👋</div>
+      <div class="msg in">Me conta um pouco do projeto que eu te mando proposta, prazo e próximos passos.</div>
+      <form id="form" novalidate>
+        <label>NOME<input name="nome" autocomplete="name" placeholder="Seu nome"></label>
+        <label>E-MAIL<input name="email" type="email" autocomplete="email" placeholder="voce@empresa.com"></label>
+        <label>TIPO DE PROJETO<div class="opts" id="optTipo"></div></label>
+        <label>INVESTIMENTO<div class="opts" id="optBudget"></div></label>
+        <label>PRAZO<div class="opts" id="optPrazo"></div></label>
+        <label>MENSAGEM<textarea name="msg" placeholder="Objetivo, público, referências"></textarea></label>
+        <div class="err" id="ferr" aria-live="polite"></div>
+        <button class="send" type="submit">Montar pedido</button>
+      </form>
+      <div class="msg out" id="summary" hidden></div>
+      <div class="outs" id="outs">
+        <a class="wa" id="waLink" href="#" target="_blank" rel="noopener">Enviar no WhatsApp</a>
+        <a id="mailLink" href="#">Enviar por e-mail</a>
+        <button type="button" id="copyBtn">Copiar texto</button>
+      </div>
+    </div>
+    <div class="direct" id="direct"></div>
+  </div>
+</section>
+
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Imagem ampliada">
+  <figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure>
+  <button class="x" id="lbX">Fechar</button>
+  <button class="pv" id="lbP" aria-label="Anterior">‹</button>
+  <button class="nx" id="lbN" aria-label="Próxima">›</button>
+</div>
+
+<script>
+/* =========================================================
+   CONTEÚDO EDITÁVEL
+   ========================================================= */
+const CONTACT = {
+  email:'contato@yandsgn.com',          // troque pelo seu e-mail
+  whats:'5500000000000',                // DDI + DDD + número, só dígitos
+  whatsLabel:'+55 (00) 00000-0000',
+  insta:'itsyandesigner',
+};
+const SOCIALS = [
+  ['Instagram','https://instagram.com/itsyandesigner'],
+  ['Behance','https://behance.net/'],     // troque pelo seu perfil
+  ['LinkedIn','https://linkedin.com/'],   // troque pelo seu perfil
+];
+/* Números do "Sobre": troque pelos seus */
+const STATS = [[8,'anos de design'],[120,'projetos entregues'],[40,'identidades visuais'],[60,'clientes']];
+
+/* Cases de identidade visual */
+const CASES = [
+  {id:'karine', name:'Karine de Souza', seg:'Advocacia e consultoria jurídica',
+   text:'Coluna clássica e pena unidas num só símbolo: tradição jurídica com um traço contemporâneo. Azul-marinho e dourado reforçam seriedade e prestígio.',
+   deliv:['Logotipo','Versões cromáticas','Paleta','Cartão de visita','Fachada 3D'], colors:['#002345','#D3AA54','#FFFFFF']},
+  {id:'nebulosa', name:'Nebulosa', seg:'Estúdio de tatuagem e piercing',
+   text:'Sol, órbitas e estrelas em traço fino, no mesmo vocabulário das tatuagens fine line do estúdio. Uma serifa de alto contraste dá o tom místico.',
+   deliv:['Logotipo','Elementos gráficos','Paleta','Placa de fachada'], colors:['#101010','#F2F2F2']},
+  {id:'canito', name:'Lucas Canito', seg:'Psicologia',
+   text:'Um cérebro dentro de um balão de fala: a terapia como conversa. Azuis acolhedores e tipografia arredondada deixam a marca leve e próxima.',
+   deliv:['Logotipo','Símbolo','Versões cromáticas','Paleta','Brinde'], colors:['#004B88','#00B7FF','#F2F2F2']},
+  {id:'freeq', name:'freeQ', seg:'Marca de lifestyle',
+   text:'Wordmark limpo com o ponto roxo como assinatura, e um lettering gritante para o mote "Vibre na sua frequência", pensado para estampar.',
+   deliv:['Logotipo','Assinaturas','Lettering','Boné','Camisetas'], colors:['#101010','#6D4299','#F2F2F2']},
+  {id:'health', name:'Health Masterclass', seg:'Educação em saúde',
+   text:'Um cérebro feito de conexões, como uma molécula: conhecimento em rede. Vermelho intenso sobre preto para uma marca de impacto.',
+   deliv:['Logotipo','Versões','Paleta','Padronagem','Key visual'], colors:['#090705','#C20008','#FFFFFF']},
+  {id:'brasero', name:'Brasero Burger', seg:'Hamburgueria', h:2500,
+   text:'Amarelo e vermelho de fome, preto para dar peso: uma marca de hamburgueria pensada para a embalagem, o boné e a tela do app.',
+   deliv:['Logotipo','Paleta','Tipografia','Boné','App'], colors:['#FFBE00','#FF142F','#000000','#FFFFFF']},
+];
+
+/* Galerias: s = nome do arquivo em img/w/, w/h = tamanho original */
+const TABS = [
+  {id:'idv', name:'Identidade visual'},
+  {id:'logos', name:'Logotipos'},
+  {id:'capas', name:'Capas de música'},
+  {id:'artistas', name:'Artistas'},
+  {id:'lanc', name:'Lançamentos'},
+];
+const GALLERY = {
+  logos:[
+    {s:'logos-sem-titulo-2',t:'Luz do Sol',c:'Moda fitness',w:1080,h:1080},
+    {s:'logos-card-1',t:"D'amore",c:'Biscoitos',w:1063,h:591},
+    {s:'logos-logo',t:'Light Financeiro',c:'Educação financeira',w:2000,h:2000},
+  ],
+  capas:[
+    {s:'capa-musica-01',t:'Mal Acostumado',c:'Vitin',w:3000,h:3000},
+    {s:'artistas-03',t:'Lembranças',c:'Vitin',w:3000,h:3000},
+    {s:'capa-musica-quando-te-vi-passar',t:'Quando Te Vi Passar',c:'Vitin feat. Leous',w:3000,h:3000},
+    {s:'capa-musica-capa-spotify',t:'Shanti Om',c:'Highlit',w:3000,h:3000},
+    {s:'capa-musica-capa',t:'Imegga',c:'Alfa Beats',w:3000,h:3000},
+    {s:'capa-musica-capa-3',t:'Cygnus',c:'Alfa Beats',w:3000,h:3000},
+    {s:'capa-musica-capa-2',t:'Spacemania',c:'Alfa Beats',w:3000,h:3000},
+    {s:'capa-musica-capa-saanvi',t:'Saanvi',c:'Wisllow',w:1350,h:1350},
+  ],
+  artistas:[
+    {s:'artistas-02',t:'Mal Acostumado, ouça agora',c:'Vitin',w:1080,h:1350},
+    {s:'artistas-agenda-bruno-furlan',t:'Next Stop Salvador',c:'Bruno Furlan',w:1080,h:1350},
+    {s:'artistas-ret',t:'RET',c:'Artista',w:2160,h:2600},
+    {s:'artistas-orochi-3',t:'Lobo Solitário',c:'Orochi',w:1080,h:1350},
+    {s:'artistas-agenda-bhaskar-2',t:'Agenda',c:'Bhaskar',w:1080,h:1350},
+    {s:'artistas-psychonaut',t:'Psychonaut',c:'DJ',w:1080,h:1350},
+    {s:'artistas-dj-cretino',t:'DJ Cretino',c:'DJ',w:1000,h:1200},
+    {s:'artistas-storie-vintage',t:'Vintage Culture',c:'Story',w:1080,h:1920},
+    {s:'artistas-almanac',t:'Papapa',c:'Almanac',w:1000,h:1200},
+    {s:'artistas-card-marcos-rap-2',t:'Marcos',c:'Rap',w:1080,h:1350},
+    {s:'artistas-04',t:'Lembranças, ouça agora',c:'Vitin',w:1080,h:1350},
+    {s:'artistas-blazy-feed-3',t:'Blazy',c:'Artista',w:1080,h:1350},
+    {s:'artistas-card-agenda-semanal',t:'Agenda semanal',c:'Dupla sertaneja',w:1080,h:1280},
+    {s:'artistas-card-playlist-geracao',t:'Geração Sertaneja',c:'Playlist Spotify',w:1000,h:1200},
+  ],
+  lanc:[
+    {s:'lancamentos-4',t:'Manifesto Borboletas',c:'Ebook, Meu Conselheiro',w:2480,h:3507},
+    {s:'lancamentos-eurotour-feed',t:'Eurotour Nova Era',c:'Meu Conselheiro',w:1080,h:1350},
+    {s:'lancamentos-capa-seminario',t:'Seminário de Relacionamento',c:'Meu Conselheiro',w:1080,h:1350},
+    {s:'lancamentos-capa',t:'Reconquista Fatal',c:'Ebook, Meu Conselheiro',w:1240,h:1754},
+    {s:'lancamentos-confessionario-feed',t:'Confessionário',c:'Meu Conselheiro',w:1080,h:1350},
+    {s:'lancamentos-de-volta-para-a-vida',t:'Recomeçar',c:'Ebook',w:1240,h:1754},
+    {s:'lancamentos-1920x800',t:'Sintonize',c:'Banner de curso',w:1920,h:800},
+  ],
+};
+const SERVICES = [
+  ['Identidade visual','Logotipo, paleta, tipografia, manual e aplicações: um sistema que funciona em qualquer lugar.'],
+  ['Lettering e logotipos','Letras desenhadas sob medida, do rascunho no papel ao vetor final.'],
+  ['Ilustração e personagens','Mascotes, personagens 3D e ilustrações que dão rosto à marca.'],
+  ['Capas e artes para artistas','Capas de single e álbum, agendas e divulgação de shows com fotomanipulação.'],
+  ['Social media e lançamentos','Key visual, ebooks e campanhas de lançamento com consistência.'],
+  ['Estampas e merch','Camisetas, bonés e drops com linguagem de rua, prontos para produção.'],
+  ['Motion design','Logos animados e posts em movimento para dar vida à identidade.'],
+];
+const TIPOS = ['Identidade visual','Logo ou lettering','Capa de música','Ilustração ou personagem','Social media','Estampa ou merch','Motion','Outro'];
+const BUDGETS = ['Até R$ 2 mil','R$ 2 a 5 mil','R$ 5 a 10 mil','Acima de R$ 10 mil','Ainda não sei'];
+const PRAZOS = ['Até 2 semanas','1 mês','2 a 3 meses','Flexível'];
+
+</script>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/addons/"}}</script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
