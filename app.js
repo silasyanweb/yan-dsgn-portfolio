@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { setupWindow } from './window.js';
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -61,10 +62,10 @@ const manager=new THREE.LoadingManager();
 manager.onProgress=(u,l,t)=>{loadP=l/t};
 manager.onLoad=()=>{loadP=1; clearInterval(fakeT); let p=bootP; const fin=setInterval(()=>{p=Math.min(1,p+.05);setBoot(p);if(p>=1)clearInterval(fin)},60)};
 const tl=new THREE.TextureLoader(manager);
-const tex=(u,srgb=true)=>{const t=tl.load(u);if(srgb)t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t};
+const tex=(u,srgb=true)=>{const t=tl.load(u);if(srgb)t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
 
 if(renderer){
-  renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05;
   renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -77,12 +78,12 @@ function cyl(rt,rb,h,mat,x,y,z,parent=scene,seg=24){const m=new THREE.Mesh(new T
 function canvasTex(w,h,draw){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');draw(x,w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;t.userData.ctx=x;t.userData.canvas=c;return t}
 
 /* ---------- luzes ---------- */
-scene.add(new THREE.HemisphereLight('#9fb6d6','#2a1d16',.35));
+const hemi=new THREE.HemisphereLight('#9fb6d6','#2a1d16',.35); scene.add(hemi);
 const amb=new THREE.AmbientLight('#4b4560',.35); scene.add(amb);
 const sun=new THREE.DirectionalLight('#ffb27a',1.6); sun.position.set(-7,4.2,-0.5); sun.target.position.set(0,0.4,-1);
-sun.castShadow=true; sun.shadow.mapSize.set(1024,1024); Object.assign(sun.shadow.camera,{left:-4,right:4,top:4,bottom:-2,near:1,far:16}); sun.shadow.bias=-.0008;
+sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); Object.assign(sun.shadow.camera,{left:-4,right:4,top:4,bottom:-2,near:1,far:16}); sun.shadow.bias=-.0008;
 scene.add(sun,sun.target);
-const lampL=new THREE.PointLight('#ffb36b',5,4.2,1.6); lampL.position.set(-0.95,1.32,-1.55); lampL.castShadow=true; lampL.shadow.mapSize.set(512,512); lampL.shadow.bias=-.002; scene.add(lampL);
+const lampL=new THREE.PointLight('#ffb36b',5,4.2,1.6); lampL.position.set(-0.95,1.32,-1.55); lampL.castShadow=true; lampL.shadow.mapSize.set(1024,1024); lampL.shadow.bias=-.002; scene.add(lampL);
 const screenL=new THREE.PointLight('#a8cfff',.9,2.2,2); scene.add(screenL);
 const fill=new THREE.DirectionalLight('#ffd9b8',.75); fill.position.set(3.2,2.6,3.2); scene.add(fill,fill.target);
 const corkSpot=new THREE.SpotLight('#ffcf9a',9,4,.55,.6,1.5); corkSpot.position.set(1.75,3.0,-1.3); scene.add(corkSpot,corkSpot.target);
@@ -112,19 +113,14 @@ box(.08,winY1-winY0+.12,.08,frameM,LEFT+.02,(winY0+winY1)/2,winX0);box(.08,winY1
 box(.08,.06,winX1-winX0,frameM,LEFT+.02,winY0,(winX0+winX1)/2);box(.08,.06,winX1-winX0,frameM,LEFT+.02,winY1,(winX0+winX1)/2);
 box(.05,winY1-winY0,.04,frameM,LEFT+.02,(winY0+winY1)/2,(winX0+winX1)/2);
 box(.24,.04,winX1-winX0+.2,M('#2c3833'),LEFT+.1,winY0-.03,(winX0+winX1)/2);
-const cityTex=canvasTex(1024,512,(x,w,h)=>{
-  const g=x.createLinearGradient(0,0,0,h);g.addColorStop(0,'#1a1f45');g.addColorStop(.45,'#4a3466');g.addColorStop(.7,'#c7637a');g.addColorStop(.86,'#f2a35c');g.addColorStop(1,'#f7c56f');x.fillStyle=g;x.fillRect(0,0,w,h);
-  for(let i=0;i<70;i++){x.fillStyle=`rgba(255,255,255,${Math.random()*.6})`;x.fillRect(Math.random()*w,Math.random()*h*.35,2,2)}
-  let px=0;while(px<w){const bw=40+Math.random()*90,bh=120+Math.random()*300;const c=['#1a1830','#221d38','#2a2140','#15142a'][Math.floor(Math.random()*4)];x.fillStyle=c;x.fillRect(px,h-bh,bw,bh);
-    for(let yy=h-bh+12;yy<h-8;yy+=16)for(let xx=px+8;xx<px+bw-8;xx+=14)if(Math.random()<.45){x.fillStyle=['#ffd27a','#ffb35a','#ffe7a8','#9fd0ff'][Math.floor(Math.random()*4)];x.fillRect(xx,yy,6,8)}px+=bw+Math.random()*10}
-  // palmeiras
-  x.strokeStyle='#120f1d';x.fillStyle='#120f1d';x.lineWidth=6;[[180,h],[260,h],[760,h]].forEach(([bx,by],k)=>{const ht=200+k*30;x.beginPath();x.moveTo(bx,by);x.quadraticCurveTo(bx+20,by-ht/2,bx+10,by-ht);x.stroke();for(let a=0;a<8;a++){x.beginPath();x.moveTo(bx+10,by-ht);const ang=a/8*Math.PI*2;x.quadraticCurveTo(bx+10+Math.cos(ang)*50,by-ht-30+Math.sin(ang)*20,bx+10+Math.cos(ang)*90,by-ht+30+Math.abs(Math.sin(ang))*20);x.lineWidth=5;x.stroke()}});
-});
-const city=new THREE.Mesh(new THREE.PlaneGeometry(9,4.5),new THREE.MeshBasicMaterial({map:cityTex}));city.rotation.y=Math.PI/2;city.position.set(LEFT-3.5,1.7,-1);scene.add(city);
+const win=setupWindow(THREE,scene,{LEFT,sun,hemi,amb,reduce});window.__win=win;
+const winHit=new THREE.Mesh(new THREE.PlaneGeometry(winX1-winX0,winY1-winY0),new THREE.MeshBasicMaterial({visible:false}));winHit.rotation.y=Math.PI/2;winHit.position.set(LEFT+.03,(winY0+winY1)/2,(winX0+winX1)/2);scene.add(winHit);
 // planta na janela
 const potM=M('#8a5532',{r:.7}),leafM=M('#3f8a55',{r:.6,side:THREE.DoubleSide});
-function plant(x,y,z,s=1){const g=new THREE.Group();g.position.set(x,y,z);g.scale.setScalar(s);scene.add(g);cyl(.11,.08,.2,potM,0,.1,0,g);
-  const lg=new THREE.PlaneGeometry(.08,.34);lg.translate(0,.17,0);for(let i=0;i<14;i++){const l=new THREE.Mesh(lg,leafM);l.position.y=.18;l.rotation.set(-.5-Math.random()*.6,i*2.4,0);l.castShadow=true;g.add(l)}return g}
+const leafM2=M('#2f6d43',{r:.6,side:THREE.DoubleSide});
+const leafGeo=(()=>{const sh=new THREE.Shape();sh.moveTo(0,0);sh.bezierCurveTo(.07,.08,.06,.26,0,.36);sh.bezierCurveTo(-.06,.26,-.07,.08,0,0);const g=new THREE.ShapeGeometry(sh,10);const p=g.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i),x=p.getX(i);p.setZ(i,-y*y*.9+Math.abs(x)*.25)}g.computeVertexNormals();return g})();
+function plant(x,y,z,s=1){const g=new THREE.Group();g.position.set(x,y,z);g.scale.setScalar(s);scene.add(g);cyl(.11,.08,.2,potM,0,.1,0,g);cyl(.115,.115,.025,potM,0,.2,0,g);cyl(.1,.1,.01,M('#2a1a10'),0,.195,0,g);
+  for(let i=0;i<18;i++){const l=new THREE.Mesh(leafGeo,i%3?leafM:leafM2);l.position.y=.19;const k=.7+Math.random()*.5;l.scale.set(k,k,k);l.rotation.order='YXZ';l.rotation.set(-.15-Math.random()*.75,i*2.4+Math.random()*.3,0);l.castShadow=true;g.add(l)}return g}
 plant(LEFT+.18,winY0,-1.65,1);
 plant(2.7,0,-2.15,1.9);
 
@@ -177,9 +173,14 @@ const glow=new THREE.Mesh(new THREE.PlaneGeometry(2.4,1.7),new THREE.MeshBasicMa
 
 /* ---------- pôsteres (capas) ---------- */
 const posterAnchor=new THREE.Vector3(-1.45,1.95,BACK+.03);
-[['img/w/capa-musica-01-sm.webp',-1.78,2.1],['img/w/capa-musica-capa-spotify-sm.webp',-1.12,1.82]].forEach(([u,x,y])=>{
+const coverList=GALLERY.capas.map(g=>`img/w/${g.s}-sm.webp`);const coverTex={},ctl=new THREE.TextureLoader();const ctex=u=>coverTex[u]||(coverTex[u]=(()=>{const t=ctl.load(u);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t})());coverList.forEach(ctex);
+const posters=[[-1.78,2.1,0],[-1.12,1.82,Math.floor(coverList.length/2)]].map(([x,y,i0],k)=>{
   box(.56,.56,.02,M('#0b0b0c',{r:.4}),x,y,BACK+.012);
-  const p=new THREE.Mesh(new THREE.PlaneGeometry(.5,.5),M('#ffffff',{map:tex(u),r:.5}));p.position.set(x,y,BACK+.025);scene.add(p)});
+  const a=new THREE.Mesh(new THREE.PlaneGeometry(.5,.5),M('#ffffff',{map:ctex(coverList[i0%coverList.length]),r:.5}));a.position.set(x,y,BACK+.025);scene.add(a);
+  const b=new THREE.Mesh(new THREE.PlaneGeometry(.5,.5),M('#ffffff',{map:ctex(coverList[(i0+1)%coverList.length]),r:.5,t:true,op:0}));b.position.set(x,y,BACK+.027);scene.add(b);
+  return {a,b,i:i0,next:4+k*2,fade:-1}});
+function stepPosters(t){posters.forEach(P=>{if(P.fade<0&&t>P.next){P.i=(P.i+1)%coverList.length;P.b.material.map=ctex(coverList[P.i]);P.b.material.needsUpdate=true;P.fade=t}
+  if(P.fade>=0){const k=Math.min(1,(t-P.fade)/1.1);P.b.material.opacity=k;if(k>=1){P.a.material.map=P.b.material.map;P.a.material.needsUpdate=true;P.b.material.opacity=0;P.fade=-1;P.next=t+4.5}}})}
 
 /* ---------- mural (serviços) ---------- */
 const corkPos=new THREE.Vector3(1.75,1.62,BACK+.05);
@@ -372,13 +373,14 @@ function loop(){
   neon.material.opacity=Math.random()<.008?.55:1; glow.material.opacity=.85+Math.sin(t*3)*.08;
   phoneScr.material.color.setHSL(.6,.8,.45+Math.max(0,Math.sin(t*3))*.18);
   steam.forEach(s=>{s.t=(s.t+.004)%1;s.m.position.set(mug.position.x+Math.sin(s.t*9+s.m.id)*.012,mug.position.y+.13+s.t*.22,mug.position.z);s.m.material.opacity=(1-s.t)*.25;s.m.scale.setScalar(1+s.t*2)});
-  drawScreen(t);
+  drawScreen(t); win.update(t); if(!reduce)stepPosters(t);
   renderer.render(scene,camera); placeHots();
   requestAnimationFrame(loop);
 }
 function resize(){camera.aspect=innerWidth/innerHeight;camera.fov=isMobile()?58:42;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false);if(!tween&&!document.body.classList.contains('zoomed')){const h=homeView();camera.position.copy(h.pos);controls.target.copy(h.target);setLimits()}}
 if(renderer){addEventListener('resize',resize);resize();loop()}
-canvas.addEventListener('pointerdown',()=>{$('#view').classList.add('drag');$('#dragHint').style.opacity=0});addEventListener('pointerup',()=>$('#view').classList.remove('drag'));
+let pdn=null;canvas.addEventListener('pointerup',e=>{if(!pdn||Math.hypot(e.clientX-pdn[0],e.clientY-pdn[1])>6)return;const r=canvas.getBoundingClientRect(),rc=new THREE.Raycaster();rc.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),camera);if(rc.intersectObject(winHit).length)win.next(1)});
+canvas.addEventListener('pointerdown',e=>{pdn=[e.clientX,e.clientY];$('#view').classList.add('drag');$('#dragHint').style.opacity=0});addEventListener('pointerup',()=>$('#view').classList.remove('drag'));
 
 /* =========================================================
    NAVEGAÇÃO ENTRE SEÇÕES
