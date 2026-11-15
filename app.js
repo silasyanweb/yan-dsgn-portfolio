@@ -112,7 +112,7 @@ box(.08,winY1-winY0+.12,.08,frameM,LEFT+.02,(winY0+winY1)/2,winX0);box(.08,winY1
 box(.08,.06,winX1-winX0,frameM,LEFT+.02,winY0,(winX0+winX1)/2);box(.08,.06,winX1-winX0,frameM,LEFT+.02,winY1,(winX0+winX1)/2);
 box(.05,winY1-winY0,.04,frameM,LEFT+.02,(winY0+winY1)/2,(winX0+winX1)/2);
 box(.24,.04,winX1-winX0+.2,M('#2c3833'),LEFT+.1,winY0-.03,(winX0+winX1)/2);
-const win=setupWindow(THREE,scene,{LEFT,sun,hemi,amb,reduce});window.__win=win;
+const win=setupWindow(THREE,scene,{LEFT,sun,hemi,amb,reduce,camera});window.__win=win;
 const winHit=new THREE.Mesh(new THREE.PlaneGeometry(winX1-winX0,winY1-winY0),new THREE.MeshBasicMaterial({visible:false}));winHit.rotation.y=Math.PI/2;winHit.position.set(LEFT+.03,(winY0+winY1)/2,(winX0+winX1)/2);scene.add(winHit);
 // planta na janela
 const potM=M('#8a5532',{r:.7}),leafM=M('#3f8a55',{r:.6,side:THREE.DoubleSide});

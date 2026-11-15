@@ -236,6 +236,20 @@ export function setupWindow(THREE, scene, opt) {
   /* ---------- véu de transição ---------- */
   const veil = plane(30, 16, new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0, fog: false, depthWrite: false }), LEFT - .2, 1.8, -1); veil.renderOrder = 20;
 
+  /* ---------- paralaxe: cada camada acompanha a câmera numa proporção ---------- */
+  // k=1 → infinitamente longe (céu); k=0 → posição real. Simula distâncias muito maiores que as reais.
+  const PAR = [];
+  const depth = (k, ...objs) => { const g = new THREE.Group(); scene.add(g); objs.flat().forEach(o => g.add(o)); PAR.push({ g, k }); return g };
+  depth(1, sky, orb, shoot);
+  depth(.9, clouds, airplane, redL, greenL, whiteL, trail, bolt, birds);
+  LAYERS.forEach(L => depth([.8, .64, .46, .3][L.n], L.mesh, L.bp));
+  hazes.forEach((h, i) => depth([.72, .56, .38][i], h));
+  depth(.55, kaiju, blast);
+  depth(.16, hw, lamps, cars.map(c => c.m));
+  let camRef = null; const camOff = new THREE.Vector3();
+  function follow() { const cam = opt.camera; if (!cam) return; if (!camRef) camRef = cam.position.clone();
+    camOff.subVectors(cam.position, camRef); if (camOff.length() > 4) camOff.setLength(4); PAR.forEach(p => p.g.position.copy(camOff).multiplyScalar(p.k)) }
+
   /* ---------- aplicar cena ---------- */
   let cur = 0, S = SCENES[0], sceneT = 0, trans = null;
   function apply(i) {
@@ -256,7 +270,7 @@ export function setupWindow(THREE, scene, opt) {
   const DUR = 14;
   let lastT = 0;
   function update(t) {
-    const dt = Math.min(.05, t - lastT); lastT = t;
+    const dt = Math.min(.05, t - lastT); lastT = t; follow();
     if (!trans && t - sceneT > DUR && !reduce && !api.paused) next(1);
     if (trans) { const k = (performance.now() - trans.t0) / 900; veil.material.opacity = k < .5 ? k * 2 : Math.max(0, 2 - k * 2); if (k >= .5 && !trans.swapped) { trans.swapped = true; apply(trans.to) } if (k >= 1) { trans = null; sceneT = t; veil.material.opacity = 0 } }
     const st = t - sceneT;
