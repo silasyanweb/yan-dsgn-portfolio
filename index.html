@@ -58,7 +58,9 @@ body.zoomed.on-trabalhos #gl{filter:brightness(.3)}
 .hs .dot i{width:11px;height:11px;background:var(--copper2);transform:rotate(45deg);box-shadow:0 0 0 3px rgba(227,154,92,.25),0 0 14px 2px rgba(227,154,92,.6);animation:pulse 2.2s ease-in-out infinite}
 @keyframes pulse{50%{transform:rotate(45deg) scale(.7);box-shadow:0 0 0 8px rgba(227,154,92,0),0 0 8px 1px rgba(227,154,92,.35)}}
 .hs .tag{position:absolute;left:18px;top:0;transform:translateY(-50%);white-space:nowrap;font:400 11px var(--tiny);letter-spacing:.06em;background:rgba(10,13,12,.86);border:1px solid rgba(228,220,200,.25);padding:6px 10px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s}
-.hs:hover .tag,.hs:focus-visible .tag{opacity:1}
+.hs:hover .tag,.hs:focus-visible .tag,.hs.hov .tag{opacity:1}
+.hs.hov .dot i{background:var(--sail);box-shadow:0 0 0 4px rgba(255,214,160,.35),0 0 22px 6px rgba(255,170,90,.8)}
+#gl.pick{cursor:pointer}
 .hs:focus-visible{outline:none}.hs:focus-visible .dot i{background:var(--sail)}
 body.zoomed #hots{display:none}
 .nogl{position:fixed;inset:0;display:none;place-items:center;text-align:center;padding:24px;color:#cfc8b6}
@@ -221,6 +223,34 @@ body.zoomed .drag-hint{opacity:0}
 .direct{font-size:13px;color:#a9a294;padding:10px 14px 14px;border-top:1px solid #1f2523}
 .direct b{color:var(--sail);font-weight:500}
 
+/* links de contato */
+.links{display:grid;gap:8px;margin-top:4px}
+.links h4{font:400 10px var(--tiny);letter-spacing:.06em;color:#a9a294;margin:10px 0 2px}
+.lk{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 14px;border-radius:14px;background:#141a18;border:1px solid #2c3532;text-decoration:none;color:var(--sail);transition:background-color .2s,border-color .2s,transform .2s}
+.lk:hover,.lk:focus-visible{background:#1d2523;border-color:var(--copper2);transform:translateX(3px)}
+.lk .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font:700 15px var(--pix);color:#fff;flex:none}
+.lk b{display:block;font:500 15px var(--body)}
+.lk small{display:block;font:400 9.5px var(--tiny);color:#a9a294;letter-spacing:.03em}
+.lk .go{margin-left:auto;color:var(--copper2);font:400 12px var(--tiny)}
+.ic.wa{background:#1f9d55}.ic.ml{background:#c8743a}.ic.ig{background:linear-gradient(135deg,#f9a03f,#d62976 55%,#7b3fbf)}.ic.be{background:#1769ff}.ic.li{background:#0a66c2}.ic.ot{background:#3a3348}
+/* rádio */
+.radio{position:fixed;z-index:40;right:clamp(12px,2vw,24px);top:clamp(64px,9vh,80px);width:min(300px,calc(100vw - 24px));background:rgba(12,15,14,.94);border:1px solid rgba(228,220,200,.2);border-radius:16px;padding:12px 14px 14px;box-shadow:0 20px 50px rgba(0,0,0,.5);backdrop-filter:blur(8px);opacity:0;visibility:hidden;transform:translateY(10px);transition:opacity .25s,transform .25s,visibility .25s}
+.radio.open{opacity:1;visibility:visible;transform:none}
+.radio .rh{display:flex;align-items:center;justify-content:space-between;font:400 10px var(--tiny);letter-spacing:.06em;color:#a9a294}
+.radio .rh button{border:0;background:none;color:#a9a294;cursor:pointer;min-width:32px;min-height:32px;font:400 12px var(--tiny)}
+.radio .rb{display:flex;align-items:center;gap:12px;margin-top:6px}
+.radio .play{width:46px;height:46px;border-radius:50%;border:0;background:var(--copper2);color:var(--ink);font-size:17px;cursor:pointer;flex:none}
+.radio .play:hover{background:var(--sail)}
+.radio .st b{display:block;font:700 17px/1.1 var(--pix)}
+.radio .st small{display:block;font:400 9.5px var(--tiny);color:#a9a294;margin-top:3px}
+.radio .eq{display:flex;gap:2px;align-items:flex-end;height:16px;margin-left:auto}
+.radio .eq i{width:3px;height:4px;background:var(--copper2);border-radius:1px}
+.radio.playing .eq i{animation:eq .9s ease-in-out infinite}
+.radio.playing .eq i:nth-child(2){animation-delay:.2s}.radio.playing .eq i:nth-child(3){animation-delay:.4s}.radio.playing .eq i:nth-child(4){animation-delay:.1s}
+@keyframes eq{50%{height:16px}}
+.radio input[type=range]{width:100%;margin-top:12px;accent-color:var(--copper2)}
+.radio .rmsg{font-size:12.5px;color:#ff9b8a;margin-top:6px;min-height:1em}
+
 /* lightbox */
 .lb{position:fixed;inset:0;z-index:60;background:rgba(5,7,6,.94);display:grid;place-items:center;padding:20px;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s}
 .lb.open{opacity:1;visibility:visible}
@@ -266,6 +296,7 @@ body.zoomed .drag-hint{opacity:0}
   <button data-go="servicos"><span>02</span>Serviços</button>
   <button data-go="sobre"><span>03</span>Sobre</button>
   <button data-go="contato"><span>04</span>Contato</button>
+  <button data-go="radio" aria-label="Rádio"><span>♫</span>Rádio</button>
 </nav>
 
 <!-- ================= TRABALHOS (editor) ================= -->
@@ -293,7 +324,7 @@ body.zoomed .drag-hint{opacity:0}
     <h2 class="ph" id="sv-h">Serviços</h2>
     <p class="lede">Do primeiro rascunho ao arquivo final, com tudo o que a marca precisa para aparecer bem em qualquer lugar.</p>
     <div class="notes" id="notes"></div>
-    <div class="cta"><button class="chip" data-go="contato" style="background:#1b130c;color:#f3e9d6">Pedir orçamento ▸</button></div>
+    <div class="cta"><button class="chip" data-go="contato" style="background:#1b130c;color:#f3e9d6">Falar comigo ▸</button></div>
   </div>
 </section>
 
@@ -316,33 +347,30 @@ body.zoomed .drag-hint{opacity:0}
 </section>
 
 <!-- ================= CONTATO ================= -->
-<section class="panel" id="p-contato" role="dialog" aria-modal="true" aria-labelledby="ct-h">
+<section class="panel" id="p-contato" role="dialog" aria-modal="true" aria-labelledby="ct-h" aria-label="Contato e redes sociais">
   <div class="sheet phone">
     <div class="bar-top"><span>21:47</span><span>▮▮▮ 5G ▰</span></div>
     <div class="chat-h"><img src="img/logo-sm.webp" alt=""><div><b id="ct-h">Yan DSGN</b><small>● online · responde em até 24h</small></div></div>
     <div class="chat">
       <div class="msg in">Opa! Bora criar junto? 👋</div>
-      <div class="msg in">Me conta um pouco do projeto que eu te mando proposta, prazo e próximos passos.</div>
-      <form id="form" novalidate>
-        <label>NOME<input name="nome" autocomplete="name" placeholder="Seu nome"></label>
-        <label>E-MAIL<input name="email" type="email" autocomplete="email" placeholder="voce@empresa.com"></label>
-        <label>TIPO DE PROJETO<div class="opts" id="optTipo"></div></label>
-        <label>INVESTIMENTO<div class="opts" id="optBudget"></div></label>
-        <label>PRAZO<div class="opts" id="optPrazo"></div></label>
-        <label>MENSAGEM<textarea name="msg" placeholder="Objetivo, público, referências"></textarea></label>
-        <div class="err" id="ferr" aria-live="polite"></div>
-        <button class="send" type="submit">Montar pedido</button>
-      </form>
-      <div class="msg out" id="summary" hidden></div>
-      <div class="outs" id="outs">
-        <a class="wa" id="waLink" href="#" target="_blank" rel="noopener">Enviar no WhatsApp</a>
-        <a id="mailLink" href="#">Enviar por e-mail</a>
-        <button type="button" id="copyBtn">Copiar texto</button>
-      </div>
+      <div class="msg in">Me chama por onde for melhor pra você. Respondo em até 24h.</div>
+      <div class="links" id="links"></div>
     </div>
     <div class="direct" id="direct"></div>
   </div>
 </section>
+
+<!-- ================= RÁDIO (popup) ================= -->
+<div class="radio" id="radio" role="dialog" aria-label="Rádio do quarto">
+  <div class="rh"><span>◉ RÁDIO DO QUARTO</span><button id="rX" aria-label="Fechar rádio">✕</button></div>
+  <div class="rb">
+    <button class="play" id="rPlay" aria-label="Tocar">▶</button>
+    <div class="st"><b id="rName">Rádio</b><small id="rState">PARADO</small></div>
+    <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  </div>
+  <input type="range" id="rVol" min="0" max="1" step="0.01" value="0.7" aria-label="Volume">
+  <div class="rmsg" id="rMsg" aria-live="polite"></div>
+</div>
 
 <div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Imagem ampliada">
   <figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure>
@@ -361,11 +389,17 @@ const CONTACT = {
   whatsLabel:'+55 (00) 00000-0000',
   insta:'itsyandesigner',
 };
+/* Redes sociais: [nome, link, @ ou texto curto, ícone (ig|be|li|ot)] */
 const SOCIALS = [
-  ['Instagram','https://instagram.com/itsyandesigner'],
-  ['Behance','https://behance.net/'],     // troque pelo seu perfil
-  ['LinkedIn','https://linkedin.com/'],   // troque pelo seu perfil
+  ['Instagram','https://instagram.com/itsyandesigner','@itsyandesigner','ig'],
+  ['Behance','https://behance.net/','seu perfil','be'],      // troque pelo seu perfil
+  ['LinkedIn','https://linkedin.com/','seu perfil','li'],    // troque pelo seu perfil
 ];
+/* Rádio online da caixinha de som: cole aqui o link do stream (mp3/aac/m3u8 direto) */
+const RADIO = {
+  name:'Lo-fi do Yan',
+  url:'',   // ex.: 'https://stream.exemplo.com/radio.mp3'
+};
 /* Números do "Sobre": troque pelos seus */
 const STATS = [[8,'anos de design'],[120,'projetos entregues'],[40,'identidades visuais'],[60,'clientes']];
 
@@ -450,10 +484,6 @@ const SERVICES = [
   ['Estampas e merch','Camisetas, bonés e drops com linguagem de rua, prontos para produção.'],
   ['Motion design','Logos animados e posts em movimento para dar vida à identidade.'],
 ];
-const TIPOS = ['Identidade visual','Logo ou lettering','Capa de música','Ilustração ou personagem','Social media','Estampa ou merch','Motion','Outro'];
-const BUDGETS = ['Até R$ 2 mil','R$ 2 a 5 mil','R$ 5 a 10 mil','Acima de R$ 10 mil','Ainda não sei'];
-const PRAZOS = ['Até 2 semanas','1 mês','2 a 3 meses','Flexível'];
-
 </script>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/addons/"}}</script>
 <script type="module" src="app.js"></script>
