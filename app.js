@@ -56,7 +56,7 @@ catch(e){ $('#nogl').style.display='grid'; clearInterval(fakeT); setBoot(1); }
 const scene=new THREE.Scene();
 scene.background=new THREE.Color('#0d1311');
 scene.fog=new THREE.Fog('#0d1311',9,16);
-const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.05,60);
+const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.05,4000);
 const manager=new THREE.LoadingManager();
 manager.onProgress=(u,l,t)=>{loadP=l/t};
 manager.onLoad=()=>{loadP=1; clearInterval(fakeT); let p=bootP; const fin=setInterval(()=>{p=Math.min(1,p+.05);setBoot(p);if(p>=1)clearInterval(fin)},60)};
