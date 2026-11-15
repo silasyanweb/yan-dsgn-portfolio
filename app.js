@@ -359,7 +359,7 @@ function drawScreen(t){
 const controls=new OrbitControls(camera,canvas);
 controls.enableDamping=true;controls.dampingFactor=.06;controls.enableZoom=false;controls.enablePan=false;controls.rotateSpeed=.45;
 const HOME={pos:V(2.35,2.05,2.55),target:V(-.05,1.05,-1.55)};
-function homeView(){const m=isMobile();return {pos:m?V(2.9,2.3,4.2):HOME.pos.clone(),target:HOME.target.clone()}}
+function homeView(){const m=isMobile();return {pos:m?V(2.6,2.2,3.6):HOME.pos.clone(),target:m?V(-.05,.55,-1.55):HOME.target.clone()}}
 function setLimits(){const h=homeView();const off=h.pos.clone().sub(h.target);const sph=new THREE.Spherical().setFromVector3(off);
   controls.minAzimuthAngle=sph.theta-.55;controls.maxAzimuthAngle=sph.theta+.45;controls.minPolarAngle=sph.phi-.25;controls.maxPolarAngle=Math.min(1.45,sph.phi+.18)}
 {const h=homeView();camera.position.copy(h.pos);controls.target.copy(h.target);controls.update();setLimits()}
@@ -517,16 +517,23 @@ audio.meow=function(){if(!this.ctx||!this.on)return;const c=this.ctx,t=c.current
    RÁDIO (caixa de som na mesa)
    ========================================================= */
 const radio={el:$('#radio'),a:new Audio(),playing:false,
-  open(){this.el.classList.add('open');$('#rName').textContent=RADIO.name||'Rádio';setTimeout(()=>$('#rPlay').focus({preventScroll:true}),200)},
+  open(){this.el.classList.add('open');$('#rName').textContent=RADIO.name||'Rádio';if(RADIO.sub&&!this.playing)$('#rState').textContent=RADIO.sub.toUpperCase();setTimeout(()=>$('#rPlay').focus({preventScroll:true}),200)},
   close(){this.el.classList.remove('open')},
   ui(st){$('#rPlay').textContent=this.playing?'❚❚':'▶';$('#rPlay').setAttribute('aria-label',this.playing?'Pausar':'Tocar');$('#rState').textContent=st;this.el.classList.toggle('playing',this.playing);
     if(audio.master&&audio.ctx)audio.master.gain.linearRampToValueAtTime(audio.on?(this.playing?.12:.55):0,audio.ctx.currentTime+.6)},
   toggle(){const m=$('#rMsg');m.textContent='';
     if(this.playing){this.a.pause();this.playing=false;return this.ui('PAUSADO')}
     if(!RADIO.url){m.textContent='Nenhuma rádio configurada ainda.';return}
-    if(this.a.src!==RADIO.url)this.a.src=RADIO.url;this.ui('CONECTANDO…');
-    this.a.play().then(()=>{this.playing=true;this.ui('AO VIVO')}).catch(()=>{this.playing=false;this.ui('PARADO');m.textContent='Não foi possível tocar esta rádio agora.'})},
+    this.ui('CONECTANDO…');
+    this.load().then(()=>this.a.play()).then(()=>{this.playing=true;this.ui('AO VIVO')}).catch(()=>{this.playing=false;this.ui('PARADO');m.textContent='Não foi possível tocar esta rádio agora.'})},
   step(t){const k=this.playing?1:0;woofer.scale.setScalar(1+k*Math.max(0,Math.sin(t*12.6))*.08);spkLed.material.emissiveIntensity=this.playing?2.4:.2}};
+radio.load=async function(){if(this.ready)return;const u=RADIO.url;
+  if(/\.m3u8/i.test(u)&&!this.a.canPlayType('application/vnd.apple.mpegurl')){
+    if(!window.Hls)await new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='vendor/hls.light.min.js';sc.onload=ok;sc.onerror=no;document.head.append(sc)});
+    if(!Hls.isSupported())throw new Error('hls');const h=new Hls({lowLatencyMode:false});h.loadSource(u);h.attachMedia(this.a);this.hls=h;
+    h.on(Hls.Events.ERROR,(e,d)=>{if(d.fatal){this.playing=false;this.ui('PARADO');$('#rMsg').textContent='A rádio não respondeu. Tente de novo.';h.destroy();this.ready=false}})}
+  else this.a.src=u;
+  this.ready=true};
 radio.a.preload='none';radio.a.volume=.7;
 $('#rPlay').onclick=()=>radio.toggle();$('#rX').onclick=()=>radio.close();$('#rVol').oninput=e=>radio.a.volume=+e.target.value;
 radio.a.addEventListener('error',()=>{if(!RADIO.url)return;radio.playing=false;radio.ui('PARADO');$('#rMsg').textContent='O link da rádio não respondeu.'});
@@ -575,10 +582,10 @@ function route(){const k=location.hash.slice(1);
   $$('.dock button').forEach(b=>b.setAttribute('aria-current',b.dataset.go===pk));
   current=k;
   const open=()=>{if(current!==k)return;if(pk==='trabalhos')ed.select(s.tab||ed.cur||'idv');const p=$('#p-'+pk);p.classList.add('open');setTimeout(()=>(p.querySelector('[data-close],button,a,input')||p).focus({preventScroll:true}),350)};
-  if(renderer)flyTo(s.view(),1.25,open);else open();
+  if(renderer&&!isMobile())flyTo(s.view(),1.25,open);else open();
 }
 function closeAll(){current=null;$$('.panel.open').forEach(p=>p.classList.remove('open'));document.body.classList.remove('zoomed','on-trabalhos');$$('.dock button').forEach(b=>b.setAttribute('aria-current','false'));
-  if(renderer)flyTo(homeView(),1.1,()=>{controls.enabled=true;setLimits()});if(lastFocus&&lastFocus.focus)lastFocus.focus({preventScroll:true})}
+  if(renderer&&!isMobile())flyTo(homeView(),1.1,()=>{controls.enabled=true;setLimits()});if(lastFocus&&lastFocus.focus)lastFocus.focus({preventScroll:true})}
 function home(){if(location.hash&&location.hash!=='#quarto')location.hash='quarto';else closeAll()}
 addEventListener('hashchange',route);
 document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g){e.preventDefault();go(g.dataset.go)}
