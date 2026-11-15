@@ -10,6 +10,9 @@ export function setupWindow(THREE, scene, opt) {
   const basic = (map, o = {}) => new THREE.MeshBasicMaterial({ map, transparent: true, fog: false, depthWrite: o.dw ?? false, toneMapped: false, opacity: o.op ?? 1, blending: o.add ? THREE.AdditiveBlending : THREE.NormalBlending });
   const plane = (w, h, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); m.rotation.y = Math.PI / 2; m.position.set(x, y, z); scene.add(m); return m };
 
+  const glowDot = c => { const cv = mkCanvas(64, 64), x = cv.getContext('2d'); const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, c); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return mkTex(cv) };
+  const toWorld = (L, u, v) => [LEFT - L.d + .03, L.base + L.h * (1 - v / L.c.height), L.z + (.5 - u / L.c.width) * L.w];
+
   /* ---------- cenas ---------- */
   const SCENES = [
     { id: 'dusk', name: 'Pôr do sol', sky: ['#1a1f45', '#4a3466', '#c7637a', '#f2a35c', '#f7c56f'], stops: [0, .42, .68, .86, 1], sun: ['#ffb27a', 1.6], hemi: .35, amb: .35, lit: .5, orb: 'sunset' },
@@ -33,7 +36,7 @@ export function setupWindow(THREE, scene, opt) {
   }
   // astro (sol/lua)
   const orbC = mkCanvas(512, 512), orbT = mkTex(orbC);
-  const orb = plane(3.2, 3.2, basic(orbT), LEFT - 14.5, 4.4, -7.5);
+  const orb = plane(3.2, 3.2, basic(orbT), LEFT - 14.5, 4.4, -7.5); orb.renderOrder = -9;
   function drawOrb(kind) {
     const x = orbC.getContext('2d'); x.clearRect(0, 0, 512, 512); orb.visible = !!kind; if (!kind) return;
     const glow = (r, c) => { const g = x.createRadialGradient(256, 256, 0, 256, 256, r); g.addColorStop(0, c); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 512, 512) };
@@ -46,19 +49,21 @@ export function setupWindow(THREE, scene, opt) {
   /* ---------- nuvens ---------- */
   const cloudC = mkCanvas(512, 256), cloudT = mkTex(cloudC);
   (() => { const x = cloudC.getContext('2d'); const r = rng(4); for (let i = 0; i < 26; i++) { const cx = 90 + r() * 330, cy = 140 + (r() - .5) * 60, rad = 30 + r() * 60; const g = x.createRadialGradient(cx, cy, 0, cx, cy, rad); g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 512, 256) } cloudT.needsUpdate = true })();
-  const clouds = []; for (let i = 0; i < 6; i++) { const m = basic(cloudT, { op: 0 }); const c = plane(6 + i % 3 * 2, 3, m, LEFT - 13 + i * .1, 3.2 + (i % 3) * .7, -14 + i * 4.2); clouds.push(c) }
+  const clouds = []; for (let i = 0; i < 6; i++) { const m = basic(cloudT, { op: 0 }); const c = plane(6 + i % 3 * 2, 3, m, LEFT - 13 + i * .1, 3.2 + (i % 3) * .7, -14 + i * 4.2); c.renderOrder = -1; clouds.push(c) }
 
   /* ---------- skyline em camadas ---------- */
   const LAYERS = [
+    { d: 15, w: 36, h: 5.4, base: -2.3, z: -8, seed: 5, n: 0, col: [.3, .4], hmin: .12, hmax: .5 },
     { d: 11, w: 26, h: 4.8, base: -2.2, z: -7, seed: 11, n: 1, col: [.42, .5], hmin: .25, hmax: .85 },
     { d: 7.5, w: 18, h: 3.9, base: -2.1, z: -5.5, seed: 23, n: 2, col: [.6, .7], hmin: .3, hmax: .95 },
     { d: 4.6, w: 12, h: 3.3, base: -2.1, z: -3.6, seed: 37, n: 3, col: [.85, 1], hmin: .25, hmax: .9, palms: true },
   ];
-  LAYERS.forEach(L => { L.c = mkCanvas(2048, Math.round(2048 * L.h / L.w)); L.t = mkTex(L.c); L.mesh = plane(L.w, L.h, basic(L.t), LEFT - L.d, L.base + L.h / 2, L.z); L.mesh.renderOrder = 10 - L.n });
-  const winLights = []; // janelas que piscam (camada da frente)
+  LAYERS.forEach(L => { L.c = mkCanvas(2048, Math.round(2048 * L.h / L.w)); L.t = mkTex(L.c); L.mesh = plane(L.w, L.h, basic(L.t), LEFT - L.d, L.base + L.h / 2, L.z); L.mesh.renderOrder = L.n;
+  L.bpos = []; L.bp = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ map: glowDot('rgba(255,70,60,1)'), size: .1 + L.d * .02, transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending, color: '#ff4a3a' })); L.bp.renderOrder = L.n + .2; scene.add(L.bp) });
+  const winLights = [], neons = []; // janelas e letreiros que piscam
   function drawLayer(L, S) {
     const x = L.c.getContext('2d'), W = L.c.width, H = L.c.height; x.clearRect(0, 0, W, H);
-    const r = rng(L.seed); const dk = L.col[0];
+    const r = rng(L.seed); const dk = L.col[0]; L.bpos.length = 0;
     const tone = (hex, k) => { const c = new THREE.Color(hex); return '#' + c.multiplyScalar(k).getHexString() };
     const baseCol = S.day ? ['#8ea6bf', '#9db2c7', '#7d93ab', '#b3c2d1'] : S.id === 'kaiju' ? ['#1a0c10', '#22101a', '#140a10'] : S.id === 'snow' ? ['#1e2840', '#252f4a', '#1a2338'] : ['#141634', '#1b1b3c', '#201a40', '#121530'];
     let px = -20;
@@ -75,7 +80,7 @@ export function setupWindow(THREE, scene, opt) {
       // topo
       const roof = r();
       if (roof < .22) { x.fillStyle = tone(c0, k * .9); x.fillRect(px + bw * .2, top - bh * .08, bw * .45, bh * .08); x.fillRect(px + bw * .32, top - bh * .14, bw * .2, bh * .06) }
-      else if (roof < .4) { x.fillStyle = tone(c0, k * .8); x.fillRect(px + bw * .45, top - 70, 4, 70); x.fillStyle = '#ff3b3b'; x.beginPath(); x.arc(px + bw * .45 + 2, top - 72, 4, 0, 7); x.fill() }
+      else if (roof < .4) { x.fillStyle = tone(c0, k * .8); x.fillRect(px + bw * .45, top - 70, 4, 70); x.fillStyle = '#ff3b3b'; x.beginPath(); x.arc(px + bw * .45 + 2, top - 72, 4, 0, 7); x.fill(); if (!S.day) L.bpos.push(toWorld(L, px + bw * .45 + 2, top - 72)) }
       else if (roof < .55) { x.fillStyle = tone(c0, k * .75); const tx = px + bw * .6; x.fillRect(tx, top - 34, 30, 26); x.fillRect(tx + 4, top - 8, 3, 8); x.fillRect(tx + 23, top - 8, 3, 8); x.beginPath(); x.moveTo(tx - 2, top - 34); x.lineTo(tx + 15, top - 46); x.lineTo(tx + 32, top - 34); x.fill() }
       else if (roof < .65) { x.fillStyle = tone(c0, k * .95); x.beginPath(); x.moveTo(px, top); x.lineTo(px + (bw - side) / 2, top - bh * .12); x.lineTo(px + bw - side, top); x.fill() }
       else { x.fillStyle = tone(c0, k * .65); x.fillRect(px - 2, top - 6, bw - side + 4, 6) }
@@ -88,10 +93,13 @@ export function setupWindow(THREE, scene, opt) {
         for (let xx = px + 10; xx < px + bw - side - ww - 6; xx += gx) {
           if (S.day) { x.fillStyle = style < .5 ? 'rgba(200,225,245,.75)' : 'rgba(120,150,180,.55)'; x.fillRect(xx, yy, ww, wh); x.fillStyle = 'rgba(255,255,255,.35)'; x.fillRect(xx, yy, ww, 2); continue }
           const on = r() < S.lit;
-          if (on) { const c = ['#ffd27a', '#ffb35a', '#ffe7a8', '#9fd0ff', '#ffc48a'][Math.floor(r() * 5)]; x.fillStyle = c; x.fillRect(xx, yy, ww, wh); if (L.n === 3 && r() < .25) winLights.push({ L, x: xx, y: yy, w: ww, h: wh, c }) }
+          if (on) { const c = ['#ffd27a', '#ffb35a', '#ffe7a8', '#9fd0ff', '#ffc48a'][Math.floor(r() * 5)]; x.fillStyle = c; x.fillRect(xx, yy, ww, wh); if (L.n >= 2 && r() < (L.n === 3 ? .3 : .14)) winLights.push({ L, x: xx, y: yy, w: ww, h: wh, c }) }
           else { x.fillStyle = 'rgba(0,0,0,.35)'; x.fillRect(xx, yy, ww, wh) }
         }
       }
+      // letreiro de neon vertical
+      if (!S.day && L.n >= 2 && r() < (L.n === 3 ? .32 : .18) && bh > 160) { const nc = ['#ff4fa3', '#4fe3ff', '#ffb347', '#9b7bff', '#5dff9b'][Math.floor(r() * 5)]; const nw = L.n === 3 ? 12 : 8, nh = Math.min(150, bh * .45), nx = px + (r() < .5 ? 6 : bw - side - nw - 6), ny = top + 18;
+        const n = { L, x: nx, y: ny, w: nw, h: nh, c: nc, on: true }; drawNeon(x, n); neons.push(n) }
       // fogo (Godzilla)
       if (S.fires && r() < .3) { const fy = top + bh * (.15 + r() * .4); const fg = x.createRadialGradient(px + bw / 2, fy, 0, px + bw / 2, fy, bw * .7); fg.addColorStop(0, 'rgba(255,170,60,.9)'); fg.addColorStop(.4, 'rgba(255,80,20,.45)'); fg.addColorStop(1, 'rgba(255,60,20,0)'); x.fillStyle = fg; x.fillRect(px - bw * .3, fy - bw * .7, bw * 1.6, bw * 1.4) }
       px += bw + 4 + r() * 18;
@@ -99,9 +107,14 @@ export function setupWindow(THREE, scene, opt) {
     // névoa na base
     const hz = x.createLinearGradient(0, H * .6, 0, H); hz.addColorStop(0, 'rgba(0,0,0,0)');
     hz.addColorStop(1, S.day ? 'rgba(200,215,230,.55)' : S.id === 'kaiju' ? 'rgba(255,90,30,.35)' : S.id === 'snow' ? 'rgba(220,230,255,.35)' : 'rgba(255,140,120,.12)'); x.fillStyle = hz; x.fillRect(0, H * .6, W, H * .4);
+    // perspectiva atmosférica: quanto mais longe, mais a cor do horizonte
+    const fogA = [.58, .28, .12, 0][L.n]; if (fogA) { x.globalCompositeOperation = 'source-atop'; x.globalAlpha = fogA; x.fillStyle = horizon(S); x.fillRect(0, 0, W, H); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over' }
     if (L.palms) { drawPalms(x, W, H, S); drawBillboard(x, W, H, S) }
+    const bp = new Float32Array(L.bpos.flat()); L.bp.geometry.setAttribute('position', new THREE.BufferAttribute(bp, 3)); L.bp.geometry.computeBoundingSphere(); L.bp.visible = bp.length > 0;
     L.t.needsUpdate = true;
   }
+  function horizon(S) { return S.day ? '#c4d8ea' : S.sky[S.sky.length - 1] }
+  function drawNeon(x, n) { x.save(); if (n.on) { x.shadowColor = n.c; x.shadowBlur = 16; x.fillStyle = n.c } else x.fillStyle = 'rgba(30,25,40,1)'; x.fillRect(n.x, n.y, n.w, n.h); if (n.on) { x.shadowBlur = 0; x.fillStyle = 'rgba(255,255,255,.7)'; for (let k = 6; k < n.h - 6; k += 14) x.fillRect(n.x + 3, n.y + k, n.w - 6, 6) } x.restore() }
   function drawPalms(x, W, H, S) {
     const col = S.day ? '#24412f' : S.id === 'snow' ? '#1c2433' : '#0b0a14';
     [[W * .1, .55], [W * .17, .48], [W * .62, .52], [W * .86, .58]].forEach(([bx, hh]) => {
@@ -127,11 +140,49 @@ export function setupWindow(THREE, scene, opt) {
     if (S.snow) { x.fillStyle = '#eef3ff'; x.fillRect(bx - 4, by - 8, bw + 8, 9) }
   }
 
+  /* ---------- névoa entre as camadas (profundidade) ---------- */
+  const hazeC = mkCanvas(4, 256), hazeT = mkTex(hazeC);
+  const hazes = [[13, .5, .5], [9.2, .32, 1.5], [6, .2, 2.5]].map(([d, op, ro]) => { const m = plane(40, 5, basic(hazeT, { op }), LEFT - d, .3, -4); m.renderOrder = ro; m.userData.op = op; return m });
+  function drawHaze(S) { const x = hazeC.getContext('2d'); x.clearRect(0, 0, 4, 256); const c = new THREE.Color(horizon(S)); const rgb = `${c.r * 255 | 0},${c.g * 255 | 0},${c.b * 255 | 0}`; const g = x.createLinearGradient(0, 0, 0, 256); g.addColorStop(0, `rgba(${rgb},0)`); g.addColorStop(.55, `rgba(${rgb},.35)`); g.addColorStop(1, `rgba(${rgb},.9)`); x.fillStyle = g; x.fillRect(0, 0, 4, 256); hazeT.needsUpdate = true }
+
+  /* ---------- viaduto com carros e postes ---------- */
+  const HW = { d: 3.9, w: 24, h: 1.5, base: -.45, z: -2 }; const HY = .34; // topo da pista
+  const hwC = mkCanvas(2048, 128), hwT = mkTex(hwC); const hw = plane(HW.w, HW.h, basic(hwT), LEFT - HW.d, HW.base + HW.h / 2, HW.z); hw.renderOrder = 3.5;
+  const pyH = y => (HW.base + HW.h - y) / HW.h * 128, pxZ = z => (.5 - (z - HW.z) / HW.w) * 2048;
+  const lampZ = []; for (let z = HW.z - HW.w / 2 + .6; z < HW.z + HW.w / 2; z += 1.7) lampZ.push(z);
+  function drawHighway(S) {
+    const x = hwC.getContext('2d'); x.clearRect(0, 0, 2048, 128);
+    const deck = S.day ? '#7c8898' : S.id === 'kaiju' ? '#1d0e10' : '#10121f', dark = S.day ? '#5b6676' : '#07080f';
+    x.fillStyle = dark; for (let z = HW.z - HW.w / 2 + 1; z < HW.z + HW.w / 2; z += 3.2) { const u = pxZ(z); x.fillRect(u - 10, pyH(HY - .08), 20, 128) }
+    x.fillStyle = deck; x.fillRect(0, pyH(HY), 2048, pyH(HY - .1) - pyH(HY));
+    x.fillStyle = S.day ? '#a9b4c2' : '#2a2e45'; x.fillRect(0, pyH(HY + .06), 2048, 3); for (let u = 0; u < 2048; u += 14) x.fillRect(u, pyH(HY + .06), 2, pyH(HY) - pyH(HY + .06));
+    if (S.snow) { x.fillStyle = '#eef3ff'; x.fillRect(0, pyH(HY + .07) - 3, 2048, 4) }
+    x.fillStyle = S.day ? '#4a5463' : '#05060c'; lampZ.forEach(z => { const u = pxZ(z); x.fillRect(u - 2, pyH(HY + .42), 4, pyH(HY) - pyH(HY + .42)); x.fillRect(u - 2, pyH(HY + .42), 18, 4) });
+    if (!S.day) { x.fillStyle = S.id === 'kaiju' ? 'rgba(255,120,60,.25)' : 'rgba(255,200,130,.18)'; x.fillRect(0, pyH(HY) - 2, 2048, 3) }
+    hwT.needsUpdate = true }
+  const lamps = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ map: glowDot('rgba(255,210,150,1)'), size: .75, transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending, color: '#ffcf8a' }));
+  lamps.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(lampZ.flatMap(z => [LEFT - HW.d + .05, HY + .41, z - .16])), 3)); lamps.renderOrder = 4.5; scene.add(lamps);
+  // carros
+  const carTex = (col, fwd) => { const cv = mkCanvas(128, 48), x = cv.getContext('2d'); if (!fwd) { x.translate(128, 0); x.scale(-1, 1) }
+    x.fillStyle = col; x.beginPath(); x.moveTo(6, 34); x.lineTo(6, 24); x.lineTo(30, 20); x.lineTo(44, 8); x.lineTo(86, 8); x.lineTo(104, 20); x.lineTo(122, 24); x.lineTo(122, 34); x.closePath(); x.fill();
+    x.fillStyle = 'rgba(160,200,230,.85)'; x.beginPath(); x.moveTo(48, 11); x.lineTo(82, 11); x.lineTo(96, 20); x.lineTo(38, 20); x.closePath(); x.fill(); x.fillStyle = col; x.fillRect(63, 10, 4, 11);
+    x.fillStyle = '#0b0b0e'; [30, 98].forEach(w => { x.beginPath(); x.arc(w, 36, 9, 0, 7); x.fill() });
+    x.fillStyle = '#fff6d8'; x.fillRect(116, 24, 6, 5); x.fillStyle = '#ff3030'; x.fillRect(6, 24, 5, 5); return mkTex(cv) };
+  const CARC = ['#d94a3a', '#e7e2d6', '#3a6fd6', '#f2b233', '#2b2b30', '#3fa36b'];
+  const headT = glowDot('rgba(255,245,215,1)'), tailT = glowDot('rgba(255,50,40,1)');
+  const cars = []; for (let i = 0; i < 12; i++) { const dir = i % 2 ? 1 : -1, col = CARC[i % CARC.length];
+    const m = plane(.36, .135, basic(carTex(col, dir < 0)), LEFT - HW.d + .07 + (dir > 0 ? .02 : 0), HY + .062, 0); m.renderOrder = 4;
+    const h = new THREE.Mesh(new THREE.PlaneGeometry(.5, .3), basic(headT, { add: true })), tl = new THREE.Mesh(new THREE.PlaneGeometry(.24, .2), basic(tailT, { add: true }));
+    h.position.set(dir < 0 ? .2 : -.2, -.01, .01); tl.position.set(dir < 0 ? -.18 : .18, -.01, .01); m.add(h, tl);
+    cars.push({ m, h, tl, dir, v: .9 + Math.random() * .9, z: -10 + Math.random() * 20 }) }
+  // estrela cadente
+  const shootC = mkCanvas(256, 16); (() => { const x = shootC.getContext('2d'); const g = x.createLinearGradient(0, 0, 256, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(255,255,255,1)'); x.fillStyle = g; x.fillRect(0, 6, 256, 4) })();
+  const shoot = plane(1.6, .1, basic(mkTex(shootC), { add: true, op: 0 }), LEFT - 13.5, 4, -6); shoot.renderOrder = -5;
+
   /* ---------- avião ---------- */
   const apC = mkCanvas(512, 192), apT = mkTex(apC);
   (() => { const x = apC.getContext('2d'); x.fillStyle = '#0a0d18'; x.beginPath(); x.ellipse(256, 96, 150, 16, 0, 0, 7); x.fill(); x.beginPath(); x.moveTo(230, 96); x.lineTo(150, 30); x.lineTo(180, 30); x.lineTo(290, 96); x.fill(); x.beginPath(); x.moveTo(230, 96); x.lineTo(160, 170); x.lineTo(190, 170); x.lineTo(290, 96); x.fill(); x.beginPath(); x.moveTo(380, 96); x.lineTo(410, 40); x.lineTo(430, 40); x.lineTo(410, 96); x.fill(); apT.needsUpdate = true })();
-  const airplane = plane(1.5, .56, basic(apT), LEFT - 12.4, 3.6, -14); airplane.visible = false;
-  const glowDot = c => { const cv = mkCanvas(64, 64), x = cv.getContext('2d'); const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, c); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return mkTex(cv) };
+  const airplane = plane(1.5, .56, basic(apT), LEFT - 12.4, 3.6, -14); airplane.visible = false; airplane.renderOrder = -.5;
   const redL = plane(.45, .45, basic(glowDot('rgba(255,60,60,1)'), { add: true }), LEFT - 12.3, 3.6, -14), greenL = plane(.45, .45, basic(glowDot('rgba(80,255,120,1)'), { add: true }), LEFT - 12.3, 3.6, -14), whiteL = plane(.55, .55, basic(glowDot('rgba(255,255,255,1)'), { add: true }), LEFT - 12.3, 3.6, -14);
   const trailC = mkCanvas(512, 32); (() => { const x = trailC.getContext('2d'); const g = x.createLinearGradient(0, 0, 512, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(230,235,255,.45)'); x.fillStyle = g; x.fillRect(0, 12, 512, 8) })();
   const trail = plane(7, .2, basic(mkTex(trailC)), LEFT - 12.5, 3.62, -18);
@@ -159,12 +210,12 @@ export function setupWindow(THREE, scene, opt) {
   })();
   const spineC = mkCanvas(1024, 1024), spineT = mkTex(spineC);
   (() => { const x = spineC.getContext('2d'); x.shadowColor = '#7fd8ff'; x.shadowBlur = 40; x.strokeStyle = 'rgba(140,220,255,.9)'; x.lineWidth = 8;[[520, 300, 46], [490, 350, 56], [462, 410, 62], [440, 470, 58], [418, 530, 52], [395, 600, 44], [380, 670, 36]].forEach(([sx, sy, s]) => { x.beginPath(); x.moveTo(sx - s * .7, sy - s * .35); x.lineTo(sx - s, sy + s * .3); x.stroke() }); spineT.needsUpdate = true })();
-  const kaiju = new THREE.Group(); kaiju.position.set(LEFT - 9.2, 0, -10.5); kaiju.rotation.y = -Math.PI / 2; kaiju.scale.setScalar(.8); scene.add(kaiju); kaiju.visible = false;
-  const gzBody = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 5.4), basic(gzT, { dw: false })); gzBody.material.side = THREE.DoubleSide; gzBody.position.y = 1.4; kaiju.add(gzBody);
-  const gzSpine = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 5.4), basic(spineT, { add: true, op: .6 })); gzSpine.material.side = THREE.DoubleSide; gzSpine.position.set(0, 1.4, -.01); kaiju.add(gzSpine);
+  const kaiju = new THREE.Group(); kaiju.position.set(LEFT - 9.2, 0, -10.5); kaiju.rotation.y = -Math.PI / 2; kaiju.scale.setScalar(.8); scene.add(kaiju); kaiju.visible = false; kaiju.renderOrder = 1.6;
+  const gzBody = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 5.4), basic(gzT, { dw: false })); gzBody.material.side = THREE.DoubleSide; gzBody.position.y = 1.4; gzBody.renderOrder = 1.6; kaiju.add(gzBody);
+  const gzSpine = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 5.4), basic(spineT, { add: true, op: .6 })); gzSpine.material.side = THREE.DoubleSide; gzSpine.position.set(0, 1.4, -.01); gzSpine.renderOrder = 1.7; kaiju.add(gzSpine);
   const beamC = mkCanvas(512, 64); (() => { const x = beamC.getContext('2d'); const g = x.createLinearGradient(0, 0, 0, 64); g.addColorStop(0, 'rgba(120,200,255,0)'); g.addColorStop(.5, 'rgba(230,248,255,1)'); g.addColorStop(1, 'rgba(120,200,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 512, 64) })();
-  const beamG = new THREE.PlaneGeometry(1, .35); beamG.translate(.5, 0, 0); const beam = new THREE.Mesh(beamG, basic(mkTex(beamC), { add: true, op: 0 })); beam.material.side = THREE.DoubleSide; kaiju.add(beam);
-  const blast = plane(2.4, 2.4, basic(glowDot('rgba(170,225,255,1)'), { add: true, op: 0 }), LEFT - 7.3, 1.2, -6.4);
+  const beamG = new THREE.PlaneGeometry(1, .35); beamG.translate(.5, 0, 0); const beam = new THREE.Mesh(beamG, basic(mkTex(beamC), { add: true, op: 0 })); beam.material.side = THREE.DoubleSide; beam.renderOrder = 1.8; kaiju.add(beam);
+  const blast = plane(2.4, 2.4, basic(glowDot('rgba(170,225,255,1)'), { add: true, op: 0 }), LEFT - 7.3, 1.2, -6.4); blast.renderOrder = 2.2;
   const fireGlow = new THREE.PointLight('#ff6a2a', 0, 12, 1.4); fireGlow.position.set(LEFT - .5, 1.6, -1); scene.add(fireGlow);
 
   /* ---------- chuva e neve (partículas) ---------- */
@@ -176,11 +227,11 @@ export function setupWindow(THREE, scene, opt) {
   const dropC = mkCanvas(8, 64); (() => { const x = dropC.getContext('2d'); const g = x.createLinearGradient(0, 0, 0, 64); g.addColorStop(0, 'rgba(190,210,240,0)'); g.addColorStop(1, 'rgba(210,225,255,.85)'); x.fillStyle = g; x.fillRect(3, 0, 2, 64) })();
   const snowM = new THREE.PointsMaterial({ size: .07, map: mkTex(flakeC), transparent: true, depthWrite: false, fog: false, opacity: .95 });
   const rainM = new THREE.PointsMaterial({ size: .16, map: mkTex(dropC), transparent: true, depthWrite: false, fog: false, opacity: .7 });
-  const parts = new THREE.Points(pg, snowM); parts.visible = false; scene.add(parts);
+  const parts = new THREE.Points(pg, snowM); parts.visible = false; parts.renderOrder = 6; scene.add(parts);
   // relâmpago
   const boltC = mkCanvas(256, 1024), boltT = mkTex(boltC);
   function drawBolt() { const x = boltC.getContext('2d'); x.clearRect(0, 0, 256, 1024); x.strokeStyle = '#f4f8ff'; x.shadowColor = '#9ec4ff'; x.shadowBlur = 24; x.lineWidth = 6; x.beginPath(); let bx = 128, by = 0; x.moveTo(bx, by); while (by < 1024) { bx += (Math.random() - .5) * 90; by += 40 + Math.random() * 60; x.lineTo(bx, by); if (Math.random() < .2) { x.moveTo(bx, by); x.lineTo(bx + (Math.random() - .5) * 140, by + 90); x.moveTo(bx, by) } } x.stroke(); boltT.needsUpdate = true }
-  const bolt = plane(2, 8, basic(boltT, { add: true, op: 0 }), LEFT - 10.5, 3, -6);
+  const bolt = plane(2, 8, basic(boltT, { add: true, op: 0 }), LEFT - 10.5, 3, -6); bolt.renderOrder = .8;
 
   /* ---------- véu de transição ---------- */
   const veil = plane(30, 16, new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0, fog: false, depthWrite: false }), LEFT - .2, 1.8, -1); veil.renderOrder = 20;
@@ -188,8 +239,10 @@ export function setupWindow(THREE, scene, opt) {
   /* ---------- aplicar cena ---------- */
   let cur = 0, S = SCENES[0], sceneT = 0, trans = null;
   function apply(i) {
-    S = SCENES[i]; cur = i; winLights.length = 0;
-    drawSky(S); drawOrb(S.orb); LAYERS.forEach(L => drawLayer(L, S));
+    S = SCENES[i]; cur = i; winLights.length = 0; neons.length = 0;
+    drawSky(S); drawOrb(S.orb); LAYERS.forEach(L => drawLayer(L, S)); drawHaze(S); drawHighway(S);
+    lamps.visible = !S.day; cars.forEach(c => { c.m.material.color.setScalar(S.day ? 1 : .55); c.h.visible = c.tl.visible = !S.day });
+    hazes.forEach(h => h.material.opacity = h.userData.op * (S.day ? .8 : 1));
     sun.color.set(S.sun[0]); sun.intensity = S.sun[1]; hemi.intensity = S.hemi; amb.intensity = S.amb;
     airplane.visible = redL.visible = greenL.visible = whiteL.visible = trail.visible = !!S.plane;
     birds.forEach(b => b.visible = !!S.birds); kaiju.visible = !!S.kaiju; blast.visible = !!S.kaiju; fireGlow.intensity = S.kaiju ? 1.4 : 0;
@@ -208,7 +261,15 @@ export function setupWindow(THREE, scene, opt) {
     if (trans) { const k = (performance.now() - trans.t0) / 900; veil.material.opacity = k < .5 ? k * 2 : Math.max(0, 2 - k * 2); if (k >= .5 && !trans.swapped) { trans.swapped = true; apply(trans.to) } if (k >= 1) { trans = null; sceneT = t; veil.material.opacity = 0 } }
     const st = t - sceneT;
     // janelas piscando
-    if (winLights.length && Math.random() < .05) { const w = winLights[Math.floor(Math.random() * winLights.length)]; const x = w.L.c.getContext('2d'); w.on = !w.on; x.fillStyle = w.on === false ? 'rgba(10,10,25,1)' : w.c; x.fillRect(w.x, w.y, w.w, w.h); w.L.t.needsUpdate = true }
+    if (winLights.length && Math.random() < .12) { const w = winLights[Math.floor(Math.random() * winLights.length)]; const x = w.L.c.getContext('2d'); w.on = !w.on; x.fillStyle = w.on === false ? 'rgba(10,10,25,1)' : w.c; x.fillRect(w.x, w.y, w.w, w.h); w.L.t.needsUpdate = true }
+    // luzes de antena piscando, letreiros falhando
+    const blink = (t * 1.1 % 1) < .45 ? 1 : .08; LAYERS.forEach(L => L.bp.material.opacity = blink);
+    if (neons.length && Math.random() < .03) { const n = neons[Math.floor(Math.random() * neons.length)]; n.on = false; drawNeon(n.L.c.getContext('2d'), n); n.L.t.needsUpdate = true; setTimeout(() => { n.on = true; drawNeon(n.L.c.getContext('2d'), n); n.L.t.needsUpdate = true }, 80 + Math.random() * 250) }
+    // carros no viaduto
+    cars.forEach(c => { c.z += c.dir * c.v * dt * (S.rain ? .7 : 1); if (c.z > 11) c.z = -11; if (c.z < -11) c.z = 11; c.m.position.z = c.z });
+    // estrela cadente (noite e neve)
+    if ((S.id === 'night' || S.id === 'snow') && !reduce) { const sd = shoot.userData; if (!sd.next || t > sd.next + 1) { sd.next = t + 5 + Math.random() * 7; sd.y = 3.4 + Math.random() * 1.4; sd.z = -9 + Math.random() * 6 }
+      const e = t - sd.next; if (e > 0 && e < .7) { shoot.position.set(LEFT - 13.5, sd.y - e * 1.2, sd.z + e * 5); shoot.rotation.x = .24; shoot.material.opacity = Math.sin(e / .7 * Math.PI) } else shoot.material.opacity = 0 } else shoot.material.opacity = 0;
     // nuvens
     clouds.forEach((c, k) => { c.position.z += dt * (.18 + k * .03) * (S.clouds === 'storm' ? 2 : 1); if (c.position.z > 10) c.position.z = -18 });
     // avião
